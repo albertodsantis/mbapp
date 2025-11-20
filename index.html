@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    
+    <!-- Configuración para Web App en iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="M&B Play">
+    
+    <!-- ICONO PERSONALIZADO "MB" (SVG Data URI) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234F46E5'/%3E%3Ctext x='50%25' y='50%25' dy='.1em' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='256' font-weight='bold' fill='white'%3EMB%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234F46E5'/%3E%3Ctext x='50%25' y='50%25' dy='.1em' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='256' font-weight='bold' fill='white'%3EMB%3C/text%3E%3C/svg%3E">
+
     <title>M&B Play</title>
     
     <!-- Tailwind CSS -->
@@ -120,7 +127,6 @@
 
         // --- COMPONENTES UI ---
         
-        // Pull To Refresh Component
         const PullToRefresh = ({ children }) => {
             const [startPoint, setStartPoint] = useState(0);
             const [pullChange, setPullChange] = useState(0);
@@ -132,7 +138,7 @@
                 setTimeout(() => {
                     setRefreshing(false);
                     setPullChange(0);
-                    window.location.reload(); // Refresco real
+                    window.location.reload();
                 }, 800);
             };
 
@@ -272,8 +278,6 @@
             );
         };
 
-        // --- PANTALLAS ---
-        
         const InstallPrompt = () => {
             const [show, setShow] = useState(false);
             useEffect(() => {
@@ -340,7 +344,6 @@
             const myTheme = myData.theme_name;
             const otherTheme = otherData.theme_name;
 
-            // FIX: Añadido pt-[calc(1.25rem+env(safe-area-inset-top))] para respetar el área segura superior
             return React.createElement('div', { className: "px-5 pb-32 space-y-6 pt-[calc(1.25rem+env(safe-area-inset-top))]" },
                 React.createElement('header', { className: "flex items-center justify-between pt-2" },
                     React.createElement('div', null,
@@ -436,7 +439,6 @@
 
             if (!myData.theme_name) return React.createElement('div', { className: "p-8 text-center text-gray-500" }, "Primero selecciona tu temática.");
 
-            // FIX: Añadido padding-top seguro
             return React.createElement('div', { className: "px-5 pb-32 space-y-6 pt-[calc(1.25rem+env(safe-area-inset-top))]" },
                 React.createElement('div', { className: `p-6 rounded-3xl border-2 ${PLAYERS[userRole].border} ${PLAYERS[userRole].bg} shadow-sm relative` },
                     React.createElement('div', { className: "mb-5" },
@@ -718,7 +720,6 @@
             useEffect(() => {
                 if (!authUser) return;
 
-                // Rutas simples (raíz) para tu DB personal
                 const themesQuery = query(collection(db, 'themes'));
                 const unsubThemes = onSnapshot(themesQuery, (snap) => {
                     const list = snap.docs.map(d => ({id: d.id, ...d.data()}));
