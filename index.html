@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rampart+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=edit_audio" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
     <title>M&B Play</title>
     
@@ -47,8 +47,16 @@
         body { overscroll-behavior-y: none; }
         .ptr-element { transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-          color: inherit;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Ocultar scrollbar pero permitir scroll */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
@@ -87,10 +95,10 @@
             where,
             increment,
             writeBatch,
-            deleteField // IMPORTANTE: Se añadió deleteField
+            deleteField
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- TU CONFIGURACIÓN REAL ---
+        // --- TU CONFIGURACIÓN REAL DE FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBzbIz_VKis6nu1W7JWWeCSgLzBqJQ8HzY",
             authDomain: "magapp-19035.firebaseapp.com",
@@ -110,7 +118,11 @@
             player_2: { id: 'player_2', name: 'Beto', phone: '34675623927', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', countColor: 'bg-blue-100 text-blue-700', barColor: 'bg-blue-500' }
         };
 
-        const EMOJIS = ["💘", "🔥", "😂", "😭", "🤨", "🤯", "💃", "😴"];
+        const EMOJIS = [
+            "💘", "🔥", "😂", "😭", "🥰", "🫠", "🤯", "🕺", 
+            "😴", "🥴", "🤮", "🤡", "🥺", "😡", "🥶", "🥳", 
+            "👀", "💀", "💩", "🫶"
+        ];
 
         const DEFAULT_THEMES = [
             "Celebrar tus pequeñas victorias", "Cocinar con ritmo", "Nostalgia bonita", "Caminar como si tuvieras una misión",
@@ -375,10 +387,12 @@
                 const targetPhone = PLAYERS[otherRole].phone;
 
                 if (myData.song_title) {
-                    text = `Agregué mi canción de hoy: *${myData.song_title}* de ${myData.artist}. 📲 Entra a M&B Play para verla: ${appLink} \n\n¡Te toca!`;
+                    // MENSAJE MISTERIOSO (SIN SPOILERS)
+                    text = `¡Ya elegí mi canción para la temática *"${myTheme}"*! 🎵 Es un temazo... 🤫\n\nEntra a M&B Play para descubrirla y reaccionar: ${appLink}`;
                 } else {
                     text = `¡Epa! 🎵 Te estamos esperando en M&B Play. ¿Cuál es tu canción de hoy? Entra aquí: ${appLink}`;
                 }
+                
                 const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');
             };
@@ -606,16 +620,35 @@
                             React.createElement('div', { className: "w-8 text-center text-[10px] font-bold text-blue-400 uppercase tracking-widest" }, "Beto")
                         )
                     ),
-                    themes.map(theme => React.createElement('div', { key: theme.id, className: `p-3 rounded-xl flex items-center justify-between border transition-colors ${theme.active ? 'bg-white border-gray-200 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'}` },
-                        React.createElement('div', { className: "flex-1 pr-2" },
-                            React.createElement('p', { className: `font-medium text-sm ${theme.active ? 'text-gray-800' : 'text-gray-400 line-through'} font-body` }, theme.name),
-                            React.createElement('button', { onClick: () => onSelectTheme(theme), className: "text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 active:scale-95 transition-transform mt-2" }, "Elegir")
-                        ),
-                        React.createElement('div', { className: "flex items-center gap-3" },
-                            React.createElement('div', { className: `w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${PLAYERS.player_1.countColor}` }, theme.usage_player_1 || 0),
-                            React.createElement('div', { className: `w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${PLAYERS.player_2.countColor}` }, theme.usage_player_2 || 0)
-                        )
-                    ))
+                    // LISTADO DE TEMAS REDISEÑADO (MÁS LIMPIO, SIN BOTÓN "ELEGIR")
+                    themes.map(theme => {
+                        // Check if this specific theme is the current selection for the user
+                        // We need to pass 'entry' prop to ThemesScreen or find another way. 
+                        // Since we don't have 'entry' here, we'll rely on logic passed from parent if we refactor, 
+                        // but for now we stick to the list. 
+                        
+                        // Wait! The requirement was: "y ademas la tematica seleccionada se pone de primera en ese listado y highlighted"
+                        // This requires knowing the current selection.
+                        // Let's assume 'themes' comes sorted with selected first (handled in parent) or we just render list for now.
+                        // Actually, to highlight it properly we need the current selection ID.
+                        // Let's add a prop 'currentSelectionId' to ThemesScreen in the parent component.
+                        
+                        return React.createElement('div', { 
+                            key: theme.id, 
+                            onClick: () => onSelectTheme(theme), // Click en toda la tarjeta
+                            className: `p-4 rounded-xl flex items-center justify-between border transition-all cursor-pointer active:scale-95 
+                                ${theme.isSelected ? 'bg-indigo-50 border-indigo-200 shadow-md ring-1 ring-indigo-200' : 'bg-white border-gray-200 hover:border-indigo-100'}` 
+                        },
+                            React.createElement('div', { className: "flex-1 pr-3" },
+                                React.createElement('p', { className: `font-medium text-sm ${theme.isSelected ? 'text-indigo-700 font-bold' : 'text-gray-700'} font-body leading-tight` }, theme.name),
+                                theme.isSelected && React.createElement('span', { className: "text-[10px] text-indigo-500 font-bold uppercase tracking-wider mt-1 block" }, "Seleccionado")
+                            ),
+                            React.createElement('div', { className: "flex items-center gap-3" },
+                                React.createElement('div', { className: `w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${PLAYERS.player_1.countColor}` }, theme.usage_player_1 || 0),
+                                React.createElement('div', { className: `w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${PLAYERS.player_2.countColor}` }, theme.usage_player_2 || 0)
+                            )
+                        );
+                    })
                 )
             );
         };
@@ -781,24 +814,28 @@
 
                 const themesQuery = query(collection(db, 'themes'));
                 const unsubThemes = onSnapshot(themesQuery, (snap) => {
-                    const list = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                    // Sorting logic
-                    list.sort((a, b) => {
-                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                        if (dateB !== dateA) {
-                            return dateB - dateA; 
-                        }
-                        return a.name.localeCompare(b.name); 
-                    });
-                    setThemes(list);
-                    if(list.length === 0) {
+                    const rawList = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    // Find currently selected theme ID for the current user
+                    // We need to check todayEntry but it might not be loaded yet or updated in this cycle
+                    // So we rely on the fact that we pass 'todayEntry' to ThemesScreen if needed, 
+                    // BUT actually we can just use the raw list and sort it.
+                    // Wait, we need to know WHICH theme is selected to highlight it and put it top.
+                    
+                    // Let's do sorting inside the ThemesScreen component where we have access to 'todayEntry' prop if we pass it,
+                    // OR we can pass the selectedThemeId to this sorting logic.
+                    // Better yet: Calculate 'isSelected' property here if we have todayEntry, but todayEntry is in another hook.
+                    // We will handle basic sorting here (newest created) and refinement in render.
+                    
+                    setThemes(rawList); // Just set raw list here, processing in render or useEffect dependency
+                    
+                    if(rawList.length === 0) {
                         DEFAULT_THEMES.forEach(name => addDoc(collection(db, 'themes'), {name, active: true}));
                     }
                 }, (error) => {
                     console.error("Error lectura:", error);
                     if (error.code === 'permission-denied') {
-                        alert("¡Error de Permisos! \n\nNo has configurado las Reglas de Firebase.\nVe a la consola -> Firestore Database -> Reglas y cámbialo a 'allow read, write: if true;'");
+                        alert("¡Error de Permisos! \n\nNo has configurado las Reglas de Firebase.");
                     }
                 });
 
@@ -818,22 +855,53 @@
                 };
             }, [authUser]);
 
+            // Process themes with selection logic whenever themes or todayEntry changes
+            const processedThemes = React.useMemo(() => {
+                const selectedId = todayEntry?.players?.[userRole]?.theme_id;
+                
+                return themes.map(t => ({
+                    ...t,
+                    isSelected: t.id === selectedId
+                })).sort((a, b) => {
+                    // 1. Selected goes first
+                    if (a.isSelected && !b.isSelected) return -1;
+                    if (!a.isSelected && b.isSelected) return 1;
+                    
+                    // 2. Newest created goes next
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    if (dateB !== dateA) return dateB - dateA;
+                    
+                    // 3. Alphabetical
+                    return a.name.localeCompare(b.name);
+                });
+            }, [themes, todayEntry, userRole]);
+
             const handleSelectTheme = async (theme, isRandom = false) => {
                 const todayId = getTodayString();
+                const currentStatus = todayEntry?.players?.[userRole]?.status;
+                
+                // Check if already submitted song
+                if (currentStatus === 'enviado' || currentStatus === 'escuchado') {
+                    if (!confirm("Ya has enviado una canción hoy. ¿Seguro que quieres cambiar la temática? (Tu canción se mantendrá, pero cambiará el contexto).")) {
+                        return;
+                    }
+                }
+                
                 let selectedTheme = theme;
                 if (isRandom) {
                     const activeThemes = themes.filter(t => t.active);
                     if(activeThemes.length === 0) return;
                     selectedTheme = activeThemes[Math.floor(Math.random() * activeThemes.length)];
                 }
+                
                 await setDoc(doc(db, 'daily_entries', todayId), {
                     date: todayId,
                     players: {
-                        [userRole]: { theme_id: selectedTheme.id, theme_name: selectedTheme.name, status: 'pendiente' }
+                        [userRole]: { theme_id: selectedTheme.id, theme_name: selectedTheme.name, status: currentStatus || 'pendiente' } // Preserve status if exists
                     }
                 }, { merge: true });
 
-                // NO INCREMENT HERE
                 setCurrentScreen('today');
             };
             
@@ -853,10 +921,17 @@
                 if (!confirm("¿Quieres cambiar de temática? Se borrará la selección actual.")) return;
                 
                 const todayId = getTodayString();
+                // Clean way to remove specific fields from nested map in Firestore
+                // Note: deleting nested fields directly can be tricky, we update the whole object for the player with reset values
+                // Actually 'deleteField()' works for specific path
+                
                 await updateDoc(doc(db, 'daily_entries', todayId), {
                     [`players.${userRole}.theme_id`]: deleteField(),
                     [`players.${userRole}.theme_name`]: deleteField(),
-                    [`players.${userRole}.status`]: deleteField() // Reset status too
+                    // We keep status/song if they exist? Logic says "no selection" implies reset.
+                    // But user might want to just change theme. 
+                    // Requirement: "vuelve a no existir seleccion".
+                    // Let's just remove theme fields.
                 });
                 
                 setCurrentScreen('themes');
@@ -873,7 +948,6 @@
                     
                     const realCounts = {};
                     
-                    // 1. Contar uso real desde el historial
                     entriesSnap.docs.forEach(doc => {
                         const data = doc.data();
                         const p1 = data.players?.player_1;
@@ -890,7 +964,6 @@
                         }
                     });
 
-                    // 2. Preparar actualizaciones
                     themesSnap.docs.forEach(themeDoc => {
                         const counts = realCounts[themeDoc.id] || { p1: 0, p2: 0 };
                         batch.update(themeDoc.ref, {
@@ -899,7 +972,6 @@
                         });
                     });
 
-                    // 3. Ejecutar
                     await batch.commit();
                     alert("¡Contadores reparados!");
                 } catch (e) {
@@ -912,7 +984,7 @@
                 const todayId = getTodayString();
                 const currentPlayerData = todayEntry?.players?.[userRole] || {};
                 
-                // FIX: Better check to avoid double counting if editing
+                // FIX: Check if we already have a song title to avoid double counting
                 const isFirstSend = !currentPlayerData.song_title; 
                 
                 await updateDoc(doc(db, 'daily_entries', todayId), {
@@ -942,9 +1014,9 @@
                 
                 React.createElement(PullToRefresh, {},
                     React.createElement('div', { className: "max-w-md mx-auto min-h-full bg-white/50 sm:shadow-2xl sm:border-x sm:border-gray-100" },
-                       currentScreen === 'home' ? React.createElement(HomeScreen, { entry: todayEntry, themes, userRole, setScreen: setCurrentScreen, onLogout: () => { setUserRole(null); localStorage.removeItem('maga_beto_role'); }, onFixCounters: handleFixCounters }) :
+                       currentScreen === 'home' ? React.createElement(HomeScreen, { entry: todayEntry, themes: processedThemes, userRole, setScreen: setCurrentScreen, onLogout: () => { setUserRole(null); localStorage.removeItem('maga_beto_role'); }, onFixCounters: handleFixCounters }) :
                        currentScreen === 'today' ? React.createElement(TodayScreen, { entry: todayEntry, userRole, onUpdateEntry: handleUpdateEntry, onSongSubmit: handleSongSubmit, onDeselectTheme: handleDeselectTheme }) :
-                       currentScreen === 'themes' ? React.createElement(ThemesScreen, { themes, onSelectTheme: handleSelectTheme, onAddTheme: handleAddTheme, onToggleTheme: handleToggleTheme, userRole }) :
+                       currentScreen === 'themes' ? React.createElement(ThemesScreen, { themes: processedThemes, onSelectTheme: handleSelectTheme, onAddTheme: handleAddTheme, onToggleTheme: handleToggleTheme, userRole }) :
                        React.createElement(StatsScreen, { userId: authUser?.uid })
                     )
                 ),
