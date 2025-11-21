@@ -7,21 +7,22 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="M&B Play">
     
-    <!-- ICONO PERSONALIZADO (ONDAS DE AUDIO) PARA HOMESCREEN -->
-    <!-- Hemos dibujado las barras de audio manualmente en SVG para que el iPhone las reconozca como imagen -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234F46E5'/%3E%3Cpath fill='white' d='M144 368c-8.8 0-16-7.2-16-16V160c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v192c0 8.8-7.2 16-16 16h-32zm112 64c-8.8 0-16-7.2-16-16V96c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v320c0 8.8-7.2 16-16 16h-32zm112-96c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v128c0 8.8-7.2 16-16 16h-32z'/%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234F46E5'/%3E%3Cpath fill='white' d='M144 368c-8.8 0-16-7.2-16-16V160c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v192c0 8.8-7.2 16-16 16h-32zm112 64c-8.8 0-16-7.2-16-16V96c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v320c0 8.8-7.2 16-16 16h-32zm112-96c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v128c0 8.8-7.2 16-16 16h-32z'/%3E%3C/svg%3E">
+    <!-- ICONO PERSONALIZADO "MB" -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234F46E5'/%3E%3Ctext x='50%25' y='50%25' dy='.1em' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='256' font-weight='bold' fill='white'%3EMB%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234F46E5'/%3E%3Ctext x='50%25' y='50%25' dy='.1em' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='256' font-weight='bold' fill='white'%3EMB%3C/text%3E%3C/svg%3E">
 
-    <!-- FUENTES DE GOOGLE: Rampart One, Quicksand y Material Symbols -->
+    <!-- FUENTES DE GOOGLE: Rampart One (Título) & Quicksand (Cuerpo) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rampart+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=edit_audio" />
+    <!-- Usamos la importación estándar sin filtros para asegurar compatibilidad total -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
 
     <title>M&B Play</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- CONFIGURACIÓN TAILWIND PARA FUENTES -->
     <script>
         tailwind.config = {
             theme: {
@@ -47,9 +48,10 @@
     <style>
         body { overscroll-behavior-y: none; }
         .ptr-element { transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        /* Clase helper para asegurar que el icono se vea bien */
         .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-          color: inherit;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -87,7 +89,8 @@
             deleteDoc,
             where,
             increment,
-            writeBatch
+            writeBatch,
+            deleteField // IMPORTANTE: Necesario para borrar campos
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // --- TU CONFIGURACIÓN REAL DE FIREBASE ---
@@ -442,7 +445,7 @@
             );
         };
 
-        const TodayScreen = ({ entry, userRole, onUpdateEntry, onSongSubmit }) => {
+        const TodayScreen = ({ entry, userRole, onUpdateEntry, onSongSubmit, onDeselectTheme }) => {
             const [localSong, setLocalSong] = useState('');
             const [localArtist, setLocalArtist] = useState('');
             const [localComment, setLocalComment] = useState('');
@@ -490,9 +493,15 @@
                 React.createElement('div', { className: `p-6 rounded-3xl border-2 ${PLAYERS[userRole].border} ${PLAYERS[userRole].bg} shadow-sm relative` },
                     React.createElement('div', { className: "mb-5" },
                         React.createElement('h3', { className: `font-bold text-lg flex items-center gap-2 ${PLAYERS[userRole].color} mb-3` }, React.createElement(User, { size: 20 }), " Tu Turno"),
-                        React.createElement('div', { className: "bg-white/70 p-4 rounded-2xl border border-white/60 text-center shadow-sm" },
+                        React.createElement('div', { className: "bg-white/70 p-4 rounded-2xl border border-white/60 text-center shadow-sm relative" },
                             React.createElement('span', { className: "text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block" }, "Temática"),
-                            React.createElement('span', { className: "text-xl font-bold text-gray-800 leading-tight font-body" }, myData.theme_name)
+                            React.createElement('span', { className: "text-xl font-bold text-gray-800 leading-tight font-body" }, myData.theme_name),
+                            // BOTÓN DE CANCELAR (X)
+                            !isSubmitted && React.createElement('button', { 
+                                onClick: onDeselectTheme,
+                                className: "absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1 transition-colors",
+                                title: "Cambiar temática"
+                            }, React.createElement(X, { size: 16 }))
                         )
                     ),
                     !isSubmitted ? React.createElement('div', { className: "space-y-4" },
@@ -627,8 +636,10 @@
 
                     data.forEach(d => {
                         const p1 = d.players?.player_1, p2 = d.players?.player_2;
-                        if (p1?.song_title && (p1.status === 'enviado' || p1.status === 'escuchado')) totalMaga++;
-                        if (p2?.song_title && (p2.status === 'enviado' || p2.status === 'escuchado')) totalBeto++;
+                        
+                        // FIX: Conteo robusto de totales
+                        if (p1?.song_title) totalMaga++;
+                        if (p2?.song_title) totalBeto++;
                         
                         if (p1?.reaction_emoji) {
                             if (!emojiStats[p1.reaction_emoji]) emojiStats[p1.reaction_emoji] = { p1: 0, p2: 0 };
@@ -658,6 +669,11 @@
                     const sortedHistory = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
                     setHistory(sortedHistory);
                     setStats({ totalMaga, totalBeto, chartData, maxTotal, hits: hits.reverse().slice(0, 20), topArtist });
+                }, (error) => {
+                    console.error("Error lectura:", error);
+                    if (error.code === 'permission-denied') {
+                        alert("¡Error de Permisos! \n\nNo has configurado las Reglas de Firebase.\nVe a la consola -> Firestore Database -> Reglas y cámbialo a 'allow read, write: if true;'");
+                    }
                 });
                 return () => unsubscribe();
             }, [userId]);
@@ -769,6 +785,7 @@
                 const themesQuery = query(collection(db, 'themes'));
                 const unsubThemes = onSnapshot(themesQuery, (snap) => {
                     const list = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    // Sorting logic
                     list.sort((a, b) => {
                         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -780,6 +797,11 @@
                     setThemes(list);
                     if(list.length === 0) {
                         DEFAULT_THEMES.forEach(name => addDoc(collection(db, 'themes'), {name, active: true}));
+                    }
+                }, (error) => {
+                    console.error("Error lectura:", error);
+                    if (error.code === 'permission-denied') {
+                        alert("¡Error de Permisos! \n\nNo has configurado las Reglas de Firebase.\nVe a la consola -> Firestore Database -> Reglas y cámbialo a 'allow read, write: if true;'");
                     }
                 });
 
@@ -830,6 +852,20 @@
                 await updateDoc(doc(db, 'themes', id), { active: newState });
             };
 
+            const handleDeselectTheme = async () => {
+                if (!confirm("¿Quieres cambiar de temática? Se borrará la selección actual.")) return;
+                
+                const todayId = getTodayString();
+                await updateDoc(doc(db, 'daily_entries', todayId), {
+                    [`players.${userRole}.theme_id`]: deleteField(),
+                    [`players.${userRole}.theme_name`]: deleteField(),
+                    [`players.${userRole}.status`]: deleteField() // Reset status too
+                });
+                
+                setCurrentScreen('themes');
+            };
+
+            // Función para recalcular los contadores
             const handleFixCounters = async () => {
                 if (!confirm("¿Seguro que quieres recalcular los contadores basados en el historial?")) return;
                 
@@ -840,21 +876,24 @@
                     
                     const realCounts = {};
                     
+                    // 1. Contar uso real desde el historial (Solo si tiene canción)
                     entriesSnap.docs.forEach(doc => {
                         const data = doc.data();
                         const p1 = data.players?.player_1;
                         const p2 = data.players?.player_2;
 
-                        if (p1?.theme_id && p1.song_title && (p1.status === 'enviado' || p1.status === 'escuchado')) {
+                        // FIX: Check song_title for real usage
+                        if (p1?.theme_id && p1.song_title) {
                             if (!realCounts[p1.theme_id]) realCounts[p1.theme_id] = { p1: 0, p2: 0 };
                             realCounts[p1.theme_id].p1++;
                         }
-                        if (p2?.theme_id && p2.song_title && (p2.status === 'enviado' || p2.status === 'escuchado')) {
+                        if (p2?.theme_id && p2.song_title) {
                             if (!realCounts[p2.theme_id]) realCounts[p2.theme_id] = { p1: 0, p2: 0 };
                             realCounts[p2.theme_id].p2++;
                         }
                     });
 
+                    // 2. Preparar actualizaciones
                     themesSnap.docs.forEach(themeDoc => {
                         const counts = realCounts[themeDoc.id] || { p1: 0, p2: 0 };
                         batch.update(themeDoc.ref, {
@@ -863,6 +902,7 @@
                         });
                     });
 
+                    // 3. Ejecutar
                     await batch.commit();
                     alert("¡Contadores reparados!");
                 } catch (e) {
@@ -875,6 +915,7 @@
                 const todayId = getTodayString();
                 const currentPlayerData = todayEntry?.players?.[userRole] || {};
                 
+                // FIX: Better check to avoid double counting if editing
                 const isFirstSend = !currentPlayerData.song_title; 
                 
                 await updateDoc(doc(db, 'daily_entries', todayId), {
@@ -885,6 +926,7 @@
                     [`players.${userRole}.spotify_link`]: data.spotify_link
                 });
 
+                // SOLO incrementa si es la primera vez que se envía hoy
                 if (isFirstSend && currentPlayerData.theme_id) {
                     const themeRef = doc(db, 'themes', currentPlayerData.theme_id);
                     await updateDoc(themeRef, { [`usage_${userRole}`]: increment(1) });
@@ -904,7 +946,7 @@
                 React.createElement(PullToRefresh, {},
                     React.createElement('div', { className: "max-w-md mx-auto min-h-full bg-white/50 sm:shadow-2xl sm:border-x sm:border-gray-100" },
                        currentScreen === 'home' ? React.createElement(HomeScreen, { entry: todayEntry, themes, userRole, setScreen: setCurrentScreen, onLogout: () => { setUserRole(null); localStorage.removeItem('maga_beto_role'); }, onFixCounters: handleFixCounters }) :
-                       currentScreen === 'today' ? React.createElement(TodayScreen, { entry: todayEntry, userRole, onUpdateEntry: handleUpdateEntry, onSongSubmit: handleSongSubmit }) :
+                       currentScreen === 'today' ? React.createElement(TodayScreen, { entry: todayEntry, userRole, onUpdateEntry: handleUpdateEntry, onSongSubmit: handleSongSubmit, onDeselectTheme: handleDeselectTheme }) :
                        currentScreen === 'themes' ? React.createElement(ThemesScreen, { themes, onSelectTheme: handleSelectTheme, onAddTheme: handleAddTheme, onToggleTheme: handleToggleTheme, userRole }) :
                        React.createElement(StatsScreen, { userId: authUser?.uid })
                     )
