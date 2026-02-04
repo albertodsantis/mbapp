@@ -38,7 +38,6 @@
         .pnl-row-total { background-color: #fdfbf7; font-weight: bold; }
         .pnl-row-net { background-color: #ecfdf5; font-weight: 800; color: #047857; }
         
-        /* Animación suave para IA */
         @keyframes pulse-purple {
             0%, 100% { box-shadow: 0 0 0 0px rgba(168, 85, 247, 0.4); }
             50% { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0); }
@@ -55,7 +54,8 @@
         import { 
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
-            LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet, Sparkles, BrainCircuit
+            LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
+            Users, User, Check
         } from 'lucide-react';
 
         // --- FIREBASE ---
@@ -68,11 +68,10 @@
         let appId;
 
         if (typeof __firebase_config !== 'undefined') {
-            // Entorno de desarrollo (Gemini)
             firebaseConfig = JSON.parse(__firebase_config);
             appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         } else {
-            // Entorno Producción (Tus datos reales de la captura)
+            // Entorno Producción
             firebaseConfig = {
                 apiKey: "AIzaSyBzbIz_VKis6nu1W7JWWeCSgLzBqJQ8HzY",
                 authDomain: "magapp-19035.firebaseapp.com",
@@ -81,7 +80,6 @@
                 messagingSenderId: "1022326629606",
                 appId: "1:1022326629606:web:ebea8e95dd233bc6560727"
             };
-            // Usamos un ID fijo para organizar tus datos dentro de tu base de datos
             appId = 'finanzas-ve-app';
         }
 
@@ -94,22 +92,6 @@
         } catch (error) {
             console.error("Error inicializando Firebase:", error);
         }
-
-        // --- GEMINI API ---
-        const callGemini = async (prompt) => {
-            const apiKey = ""; 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                if (!response.ok) throw new Error('Error en la API de Gemini');
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text;
-            } catch (error) { return null; }
-        };
 
         // --- CONSTANTES ---
         const DEFAULT_PNL = {
@@ -139,7 +121,6 @@
                 danger: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100",
                 ghost: "text-gray-500 hover:bg-gray-100",
                 indigo: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200",
-                magic: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-md shadow-purple-200"
             };
             return React.createElement('button', { 
                 onClick, type, disabled,
@@ -149,92 +130,146 @@
 
         // --- PANTALLAS ---
 
-        const LoginScreen = () => {
-            const [loading, setLoading] = useState(false);
+        const LoginScreen = ({ onSelectProfile }) => {
+            const [loadingProfile, setLoadingProfile] = useState(null);
             const [errorMsg, setErrorMsg] = useState(null);
             
             useEffect(() => {
                 const autoAuth = async () => {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        setLoading(true);
                         try { await signInWithCustomToken(auth, __initial_auth_token); } 
-                        catch (e) { console.error(e); setLoading(false); }
+                        catch (e) { console.error(e); }
                     }
                 };
                 if(auth) autoAuth();
             }, []);
 
-            const handleLogin = async () => {
-                setLoading(true);
+            const handleProfileSelect = async (profileId) => {
+                setLoadingProfile(profileId);
                 setErrorMsg(null);
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
-                    await signInAnonymously(auth);
+                    
+                    if (!auth.currentUser) {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    onSelectProfile(profileId);
                 } catch (error) {
                     console.error("Login error:", error);
-                    setLoading(false);
+                    setLoadingProfile(null);
                     if (error.code === 'auth/admin-restricted-operation') {
-                        setErrorMsg("⚠️ Error: Habilita el 'Inicio de sesión anónimo' en Firebase Console > Authentication.");
-                    } else if (error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') {
-                         setErrorMsg("⚠️ Error: API Key no válida.");
+                        setErrorMsg("⚠️ Error: Habilita el 'Inicio de sesión anónimo' en Firebase Console.");
                     } else {
-                        setErrorMsg("Error: " + error.message);
+                        setErrorMsg("Error al conectar: " + error.message);
                     }
                 }
             };
 
+            const profiles = [
+                { id: 'user_01', label: 'Usuario 1' },
+                { id: 'user_02', label: 'Usuario 2' },
+                { id: 'user_03', label: 'Usuario 3' },
+                { id: 'user_04', label: 'Usuario 4' }
+            ];
+
             return React.createElement('div', { className: "h-screen flex flex-col items-center justify-center p-6 bg-emerald-50" },
                 React.createElement('div', { className: "bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm text-center" },
                     React.createElement('div', { className: "w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600" },
-                        React.createElement(Wallet, { size: 40 })
+                        React.createElement(Users, { size: 40 })
                     ),
                     React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, "Finanzas VE"),
-                    React.createElement('p', { className: "text-gray-500 mb-8" }, "Tu P&L Personalizado en Venezuela."),
+                    React.createElement('p', { className: "text-gray-500 mb-8" }, "¿Quién eres hoy?"),
                     
                     errorMsg && React.createElement('div', { className: "mb-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 text-left font-medium" }, errorMsg),
 
-                    React.createElement(Button, { onClick: handleLogin, disabled: loading }, 
-                        loading ? "Entrando..." : "Comenzar"
+                    React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                        profiles.map(profile => 
+                            React.createElement('button', {
+                                key: profile.id,
+                                onClick: () => handleProfileSelect(profile.id),
+                                disabled: loadingProfile !== null,
+                                className: `p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${loadingProfile === profile.id ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-100 hover:border-emerald-200 hover:bg-gray-50 text-gray-600'}`
+                            },
+                                React.createElement(User, { size: 24, className: loadingProfile === profile.id ? "animate-bounce" : "" }),
+                                React.createElement('span', { className: "text-sm font-bold" }, loadingProfile === profile.id ? "Entrando..." : profile.label)
+                            )
+                        )
                     )
                 )
             );
         };
 
-        // ... (Resto de componentes PnLConfigModal, AddTransactionModal, RatesCard, HomeView, HistoryView, PnLReportView se mantienen igual)
-        // Incluyo aquí las definiciones clave para que el archivo sea autónomo.
-        
         const PnLConfigModal = ({ onClose, pnlData, onUpdatePnl }) => {
             const [localPnl, setLocalPnl] = useState(pnlData);
             const [newConcept, setNewConcept] = useState("");
             const [activeSegment, setActiveSegment] = useState("ingresos"); 
-            const handleAdd = () => { if (!newConcept.trim()) return; const updatedList = [...(localPnl[activeSegment] || []), newConcept.trim()]; setLocalPnl({ ...localPnl, [activeSegment]: updatedList }); setNewConcept(""); };
-            const handleDelete = (segment, index) => { const updatedList = localPnl[segment].filter((_, i) => i !== index); setLocalPnl({ ...localPnl, [segment]: updatedList }); };
-            const handleSave = () => { onUpdatePnl(localPnl); onClose(); };
+
+            const handleAdd = () => {
+                if (!newConcept.trim()) return;
+                const updatedList = [...(localPnl[activeSegment] || []), newConcept.trim()];
+                setLocalPnl({ ...localPnl, [activeSegment]: updatedList });
+                setNewConcept("");
+            };
+
+            const handleDelete = (segment, index) => {
+                const updatedList = localPnl[segment].filter((_, i) => i !== index);
+                setLocalPnl({ ...localPnl, [segment]: updatedList });
+            };
+
+            const handleSave = () => {
+                onUpdatePnl(localPnl);
+                onClose();
+            };
+
             return React.createElement('div', { className: "fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center animate-in fade-in" },
                 React.createElement('div', { className: "bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl h-[90vh] sm:h-[80vh] flex flex-col" },
                     React.createElement('div', { className: "flex justify-between items-center mb-4" },
                         React.createElement('h2', { className: "text-xl font-bold flex items-center gap-2" }, React.createElement(List, { size: 24, className: "text-indigo-600" }), "Configurar P&L"),
                         React.createElement('button', { onClick: onClose, className: "p-2 bg-gray-100 rounded-full" }, React.createElement(X, { size: 20 }))
                     ),
+
                     React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide" },
-                        ["ingresos", "gastos_fijos", "gastos_variables"].map(seg => React.createElement('button', { key: seg, onClick: () => setActiveSegment(seg), className: `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${activeSegment === seg ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}` }, SEGMENTS[seg].label))
+                        ["ingresos", "gastos_fijos", "gastos_variables"].map(seg => 
+                            React.createElement('button', {
+                                key: seg,
+                                onClick: () => setActiveSegment(seg),
+                                className: `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${activeSegment === seg ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`
+                            }, SEGMENTS[seg].label)
+                        )
                     ),
+                    
                     React.createElement('div', { className: "bg-indigo-50 p-4 rounded-xl mb-4" },
                         React.createElement('p', { className: "text-xs text-indigo-500 font-bold uppercase mb-2" }, `Agregar a ${SEGMENTS[activeSegment].label}`),
                         React.createElement('div', { className: "flex gap-2" },
-                            React.createElement('input', { value: newConcept, onChange: (e) => setNewConcept(e.target.value), placeholder: "Nuevo concepto...", className: "flex-1 p-2 rounded-lg border border-indigo-200 focus:outline-none focus:border-indigo-500" }),
+                            React.createElement('input', { 
+                                value: newConcept, 
+                                onChange: (e) => setNewConcept(e.target.value),
+                                placeholder: "Nuevo concepto...",
+                                className: "flex-1 p-2 rounded-lg border border-indigo-200 focus:outline-none focus:border-indigo-500"
+                            }),
                             React.createElement('button', { onClick: handleAdd, className: "bg-indigo-600 text-white p-2 rounded-lg" }, React.createElement(Plus, { size: 20 }))
                         )
                     ),
+
                     React.createElement('div', { className: "flex-1 overflow-y-auto space-y-2 pr-1" },
-                        (localPnl[activeSegment] || []).map((concept, idx) => React.createElement('div', { key: idx, className: "flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100" }, React.createElement('span', { className: "font-medium text-gray-700" }, concept), React.createElement('button', { onClick: () => handleDelete(activeSegment, idx), className: "text-red-400 hover:text-red-600 p-1" }, React.createElement(Trash2, { size: 16 }))))
+                        (localPnl[activeSegment] || []).map((concept, idx) => 
+                            React.createElement('div', { key: idx, className: "flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100" },
+                                React.createElement('span', { className: "font-medium text-gray-700" }, concept),
+                                React.createElement('button', { onClick: () => handleDelete(activeSegment, idx), className: "text-red-400 hover:text-red-600 p-1" }, React.createElement(Trash2, { size: 16 }))
+                            )
+                        )
                     ),
-                    React.createElement('div', { className: "pt-4 border-t border-gray-100 mt-4" }, React.createElement('p', { className: "text-xs text-gray-400 text-center mb-3" }, "Nota: El segmento 'Ahorro' es fijo."), React.createElement(Button, { onClick: handleSave, variant: "indigo" }, "Guardar Estructura"))
+
+                    React.createElement('div', { className: "pt-4 border-t border-gray-100 mt-4" },
+                         React.createElement('p', { className: "text-xs text-gray-400 text-center mb-3" }, "Nota: El segmento 'Ahorro' es fijo."),
+                        React.createElement(Button, { onClick: handleSave, variant: "indigo" }, "Guardar Estructura")
+                    )
                 )
             );
         };
 
-        const AddTransactionModal = ({ onClose, rates, userId, pnlStructure }) => {
+        const AddTransactionModal = ({ onClose, rates, userId, pnlStructure, profileId }) => {
             const [segment, setSegment] = useState('gastos_variables'); 
             const [amount, setAmount] = useState('');
             const [currency, setCurrency] = useState('VES');
@@ -242,32 +277,12 @@
             const [description, setDescription] = useState('');
             const [rateType, setRateType] = useState('bcv');
             const [customRate, setCustomRate] = useState(rates.bcv || 0);
-            const [magicInput, setMagicInput] = useState('');
-            const [isThinking, setIsThinking] = useState(false);
 
             useEffect(() => {
                 const concepts = pnlStructure[segment] || [];
                 if (concepts.length > 0 && !category) setCategory(concepts[0]);
                 else setCategory("");
             }, [segment, pnlStructure]);
-
-            const handleMagicFill = async () => {
-                if(!magicInput.trim()) return;
-                setIsThinking(true);
-                const allCategories = [];
-                Object.keys(pnlStructure).forEach(seg => { (pnlStructure[seg] || []).forEach(cat => allCategories.push(`${cat} (${seg})`)); });
-                const prompt = `Actúa como un asistente contable venezolano. Analiza: "${magicInput}". Devuelve JSON: {amount: number, currency: "VES"|"USD", description: string, category_match: string de [${allCategories.join(", ")}], segment: string}.`;
-                try {
-                    const response = await callGemini(prompt);
-                    const cleanJson = response.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const data = JSON.parse(cleanJson);
-                    if(data.amount) setAmount(data.amount.toString());
-                    if(data.currency) setCurrency(data.currency);
-                    if(data.description) setDescription(data.description);
-                    if(data.segment && SEGMENTS[data.segment]) setSegment(data.segment);
-                    setTimeout(() => { if(data.category_match) { const cleanCat = data.category_match.split(' (')[0]; setCategory(cleanCat); } }, 100);
-                } catch (e) { alert("No pude entender el gasto."); } finally { setIsThinking(false); }
-            };
 
             const calculatedUSD = useMemo(() => {
                 if (!amount) return 0;
@@ -276,6 +291,7 @@
                 if (rateType === 'bcv') rate = rates.bcv;
                 else if (rateType === 'parallel') rate = rates.parallel;
                 else rate = customRate;
+
                 if (!rate || rate === 0) return 0;
                 return parseFloat(amount) / rate;
             }, [amount, currency, rateType, customRate, rates]);
@@ -283,23 +299,31 @@
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!amount || !category) return;
+
                 const finalRate = currency === 'USD' ? 1 : (rateType === 'bcv' ? rates.bcv : (rateType === 'parallel' ? rates.parallel : customRate));
                 const type = SEGMENTS[segment].type;
-                await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: new Date().toISOString() });
+                
+                await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { 
+                    type, 
+                    segment, 
+                    amount: parseFloat(amount), 
+                    currency, 
+                    originalRate: parseFloat(finalRate), 
+                    amountUSD: calculatedUSD, 
+                    category, 
+                    description, 
+                    date: new Date().toISOString(),
+                    profileId 
+                });
                 onClose();
             };
 
             return React.createElement('div', { className: "fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center animate-in fade-in" },
                 React.createElement('div', { className: "bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl h-[90vh] sm:h-auto overflow-y-auto" },
                     React.createElement('div', { className: "flex justify-between items-center mb-4" }, React.createElement('h2', { className: "text-xl font-bold" }, "Nuevo Movimiento"), React.createElement('button', { onClick: onClose, className: "p-2 bg-gray-100 rounded-full" }, React.createElement(X, { size: 20 }))),
-                    React.createElement('div', { className: "mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100" },
-                        React.createElement('label', { className: "text-xs font-bold text-purple-600 uppercase mb-2 flex items-center gap-1" }, React.createElement(Sparkles, { size: 14 }), " Registro Mágico con IA"),
-                        React.createElement('div', { className: "flex gap-2" },
-                            React.createElement('input', { value: magicInput, onChange: (e) => setMagicInput(e.target.value), placeholder: "Ej: Pagué 500 bolos de condominio", className: "flex-1 p-2 text-sm rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500", onKeyDown: (e) => e.key === 'Enter' && handleMagicFill() }),
-                            React.createElement('button', { onClick: handleMagicFill, disabled: isThinking, className: "bg-purple-600 text-white p-2 rounded-lg disabled:opacity-50 flex items-center justify-center min-w-[40px]" }, isThinking ? React.createElement(RefreshCw, { className: "animate-spin", size: 18 }) : React.createElement(BrainCircuit, { size: 18 }))
-                        )
-                    ),
+                    
                     React.createElement('div', { className: "grid grid-cols-2 gap-2 mb-6" }, Object.keys(SEGMENTS).map(key => React.createElement('button', { key: key, onClick: () => setSegment(key), className: `p-2 rounded-lg text-xs font-bold transition-all border ${segment === key ? `${SEGMENTS[key].bg} ${SEGMENTS[key].color} border-current` : 'bg-gray-50 text-gray-500 border-transparent'}` }, SEGMENTS[key].label))),
+                    
                     React.createElement('form', { onSubmit: handleSubmit, className: "space-y-4" },
                         React.createElement('div', { className: "flex gap-2" },
                             React.createElement('div', { className: "relative flex-1" },
@@ -327,34 +351,110 @@
 
         const RatesCard = ({ rates, onUpdateRate }) => {
             const [isEditing, setIsEditing] = useState(false);
+            const [isRefreshing, setIsRefreshing] = useState(false);
             const [tempRates, setTempRates] = useState(rates);
+
             useEffect(() => setTempRates(rates), [rates]);
+
             const handleSave = () => { onUpdateRate(tempRates); setIsEditing(false); };
-            if (isEditing) { return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" }, React.createElement('div', { className: "flex justify-between items-center mb-3" }, React.createElement('h3', { className: "text-sm font-bold text-indigo-800 uppercase" }, "Editar Tasas"), React.createElement('button', { onClick: handleSave, className: "text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg font-bold" }, "Guardar")), React.createElement('div', { className: "grid grid-cols-2 gap-4" }, React.createElement('div', null, React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "BCV"), React.createElement('input', { type: "number", value: tempRates.bcv, onChange: e => setTempRates({...tempRates, bcv: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })), React.createElement('div', null, React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "PARALELO"), React.createElement('input', { type: "number", value: tempRates.parallel, onChange: e => setTempRates({...tempRates, parallel: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })))); }
-            return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" }, React.createElement('div', { className: "flex justify-between items-center mb-3" }, React.createElement('h3', { className: "text-xs font-bold text-indigo-400 uppercase tracking-widest" }, "Tasas del Día"), React.createElement('button', { onClick: () => setIsEditing(true), className: "p-1 hover:bg-indigo-100 rounded-full text-indigo-400" }, React.createElement(Settings, { size: 16 }))), React.createElement('div', { className: "flex justify-around items-center" }, React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.bcv), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "BCV")), React.createElement('div', { className: "h-8 w-px bg-indigo-200" }), React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.parallel), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "PARALELO"))));
+
+            const fetchLiveRates = async () => {
+                setIsRefreshing(true);
+                try {
+                    // Usando dolarapi.com para Venezuela
+                    const [bcvRes, parallelRes] = await Promise.all([
+                        fetch('https://ve.dolarapi.com/v1/dolares/oficial').catch(() => null),
+                        fetch('https://ve.dolarapi.com/v1/dolares/paralelo').catch(() => null)
+                    ]);
+                    
+                    const newRates = { ...rates };
+                    
+                    if (bcvRes && bcvRes.ok) {
+                        const bcvData = await bcvRes.json();
+                        if (bcvData.promedio) newRates.bcv = parseFloat(bcvData.promedio);
+                    }
+                    
+                    if (parallelRes && parallelRes.ok) {
+                        const parallelData = await parallelRes.json();
+                        if (parallelData.promedio) newRates.parallel = parseFloat(parallelData.promedio);
+                    }
+                    
+                    onUpdateRate(newRates);
+                } catch (e) {
+                    console.error("Error fetching rates:", e);
+                    alert("No se pudieron actualizar las tasas automáticamente.");
+                } finally {
+                    setIsRefreshing(false);
+                }
+            };
+
+            if (isEditing) {
+                return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" },
+                    React.createElement('div', { className: "flex justify-between items-center mb-3" },
+                        React.createElement('h3', { className: "text-sm font-bold text-indigo-800 uppercase" }, "Editar Tasas"),
+                        React.createElement('button', { onClick: handleSave, className: "text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg font-bold" }, "Guardar")
+                    ),
+                    React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                        React.createElement('div', null,
+                            React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "BCV"),
+                            React.createElement('input', { type: "number", value: tempRates.bcv, onChange: e => setTempRates({...tempRates, bcv: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })
+                        ),
+                        React.createElement('div', null,
+                            React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "PARALELO"),
+                            React.createElement('input', { type: "number", value: tempRates.parallel, onChange: e => setTempRates({...tempRates, parallel: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })
+                        )
+                    )
+                );
+            }
+
+            return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" },
+                React.createElement('div', { className: "flex justify-between items-center mb-3" },
+                    React.createElement('h3', { className: "text-xs font-bold text-indigo-400 uppercase tracking-widest" }, "Tasas del Día"),
+                    React.createElement('div', { className: "flex gap-2" },
+                        React.createElement('button', { onClick: fetchLiveRates, className: `p-1 hover:bg-indigo-100 rounded-full text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}` }, React.createElement(RefreshCw, { size: 16 })),
+                        React.createElement('button', { onClick: () => setIsEditing(true), className: "p-1 hover:bg-indigo-100 rounded-full text-indigo-400" }, React.createElement(Settings, { size: 16 }))
+                    )
+                ),
+                React.createElement('div', { className: "flex justify-around items-center" },
+                    React.createElement('div', { className: "text-center" },
+                        React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.bcv),
+                        React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "BCV")
+                    ),
+                    React.createElement('div', { className: "h-8 w-px bg-indigo-200" }),
+                    React.createElement('div', { className: "text-center" },
+                        React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.parallel),
+                        React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "PARALELO")
+                    )
+                )
+            );
         };
 
-        const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onOpenConfig }) => {
+        const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onOpenConfig, currentProfileLabel, onLogout }) => {
             const balance = transactions.reduce((acc, curr) => { return curr.type === 'income' ? acc + (curr.amountUSD || 0) : acc - (curr.amountUSD || 0); }, 0);
             const recent = transactions.slice(0, 5);
             return React.createElement('div', { className: "p-5 pb-32 space-y-6" },
-                React.createElement('header', { className: "flex justify-between items-center pt-2" }, React.createElement('div', null, React.createElement('h1', { className: "text-2xl font-bold text-gray-800" }, "Mi Billetera"), React.createElement('p', { className: "text-sm text-gray-500" }, "P&L Personal 🇻🇪")), React.createElement('button', { onClick: onOpenConfig, className: "w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200" }, React.createElement(List, { size: 20 }))),
+                React.createElement('header', { className: "flex justify-between items-center pt-2" }, React.createElement('div', null, React.createElement('h1', { className: "text-2xl font-bold text-gray-800" }, "Mi Billetera"), React.createElement('p', { className: "text-sm text-gray-500" }, `${currentProfileLabel} - P&L 🇻🇪`)), React.createElement('button', { onClick: onOpenConfig, className: "w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200" }, React.createElement(List, { size: 20 }))),
                 React.createElement('div', { className: "bg-emerald-600 text-white p-6 rounded-3xl shadow-lg shadow-emerald-200" }, React.createElement('p', { className: "text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1" }, "Cash Flow Disponible"), React.createElement('h2', { className: "text-4xl font-bold mb-4" }, `$${balance.toFixed(2)}`), React.createElement('div', { className: "flex gap-3" }, React.createElement('button', { onClick: onOpenAdd, className: "flex-1 bg-white/20 hover:bg-white/30 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 backdrop-blur-sm transition-colors" }, React.createElement(Plus, { size: 16 }), "Registrar"))),
                 React.createElement(RatesCard, { rates, onUpdateRate }),
-                React.createElement('div', null, React.createElement('div', { className: "flex justify-between items-end mb-4" }, React.createElement('h3', { className: "font-bold text-gray-700" }, "Recientes"), React.createElement('span', { className: "text-xs text-emerald-600 font-medium" }, "Ver todo")), React.createElement('div', { className: "space-y-3" }, recent.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm" }, React.createElement('div', { className: "flex items-center gap-3" }, React.createElement('div', { className: `w-10 h-10 rounded-full flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}` }, t.type === 'income' ? React.createElement(TrendingUp, { size: 18 }) : React.createElement(TrendingDown, { size: 18 })), React.createElement('div', null, React.createElement('p', { className: "font-bold text-sm text-gray-800" }, t.category), React.createElement('p', { className: "text-xs text-gray-400" }, t.segment ? SEGMENTS[t.segment]?.label : (t.type === 'income' ? 'Ingreso' : 'Gasto')))), React.createElement('div', { className: "text-right" }, React.createElement('p', { className: `font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}` }, t.type === 'income' ? '+' : '-', `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('p', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? `$${t.amount}` : `Bs. ${t.amount}`))))))
+                React.createElement('div', null, React.createElement('div', { className: "flex justify-between items-end mb-4" }, React.createElement('h3', { className: "font-bold text-gray-700" }, "Recientes"), React.createElement('span', { className: "text-xs text-emerald-600 font-medium" }, "Ver todo")), React.createElement('div', { className: "space-y-3" }, recent.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm" }, React.createElement('div', { className: "flex items-center gap-3" }, React.createElement('div', { className: `w-10 h-10 rounded-full flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}` }, t.type === 'income' ? React.createElement(TrendingUp, { size: 18 }) : React.createElement(TrendingDown, { size: 18 })), React.createElement('div', null, React.createElement('p', { className: "font-bold text-sm text-gray-800" }, t.category), React.createElement('p', { className: "text-xs text-gray-400" }, t.segment ? SEGMENTS[t.segment]?.label : (t.type === 'income' ? 'Ingreso' : 'Gasto')))), React.createElement('div', { className: "text-right" }, React.createElement('p', { className: `font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}` }, t.type === 'income' ? '+' : '-', `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('p', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? `$${t.amount}` : `Bs. ${t.amount}`)))))),
+                React.createElement('div', { className: "bg-white p-4 rounded-2xl shadow-sm border border-red-100 mt-4" },
+                    React.createElement(Button, { onClick: onLogout, variant: "danger", className: "w-full py-3" }, React.createElement(LogOut, { size: 20 }), "Cambiar de Usuario")
+                )
             );
         };
 
         const HistoryView = ({ transactions }) => {
-             return React.createElement('div', { className: "p-5 pb-32 space-y-4 pt-[env(safe-area-inset-top)]" }, React.createElement('h2', { className: "text-2xl font-bold text-gray-900 mb-4" }, "Historial P&L"), React.createElement('div', { className: "space-y-3" }, transactions.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center" }, React.createElement('div', { className: "flex flex-col" }, React.createElement('span', { className: "font-bold text-gray-800" }, t.category), React.createElement('span', { className: "text-xs px-2 py-0.5 rounded-md w-fit mt-1 " + (t.segment ? SEGMENTS[t.segment].bg + " " + SEGMENTS[t.segment].color : "bg-gray-100 text-gray-500") }, t.segment ? SEGMENTS[t.segment].label : (t.type === 'income' ? 'Ingreso' : 'Gasto'))), React.createElement('div', { className: "text-right" }, React.createElement('span', { className: `block font-bold ${t.type === 'income' ? 'text-green-600' : 'text-gray-800'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('span', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`))))));
+             return React.createElement('div', { className: "p-5 pb-32 space-y-4 pt-[env(safe-area-inset-top)]" }, React.createElement('h2', { className: "text-2xl font-bold text-gray-900 mb-4" }, "Historial P&L"), React.createElement('div', { className: "space-y-3" }, transactions.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center" }, React.createElement('div', { className: "flex flex-col" }, React.createElement('span', { className: "font-bold text-gray-800" }, t.category), React.createElement('span', { className: "text-xs px-2 py-0.5 rounded-md w-fit mt-1 " + (t.segment ? SEGMENTS[t.segment].bg + " " + SEGMENTS[t.segment].color : "bg-gray-100 text-gray-500") }, t.segment ? SEGMENTS[t.segment].label : (t.type === 'income' ? 'Ingreso' : 'Gasto'))), React.createElement('div', { className: "text-right" }, React.createElement('span', { className: `block font-bold ${t.type === 'income' ? 'text-green-600' : 'text-gray-800'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('span', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`)
+                         )
+                    ))
+                )
+            );
         };
         
         const PnLReportView = ({ transactions, pnlStructure }) => {
             const [granularity, setGranularity] = useState('monthly');
             const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 5); return d.toISOString().split('T')[0]; });
             const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-            const [analysis, setAnalysis] = useState("");
-            const [analyzing, setAnalyzing] = useState(false);
 
             const periods = useMemo(() => {
                 const start = new Date(startDate);
@@ -401,25 +501,13 @@
                 return data;
             }, [transactions, periods, granularity, startDate, endDate, pnlStructure]);
 
-            const handleAnalyze = async () => {
-                setAnalyzing(true);
-                setAnalysis("");
-                const summary = { periodo: `${startDate} al ${endDate}`, totales_por_segmento: { ingresos: Object.values(reportData.ingresos.total).reduce((a,b)=>a+b, 0), gastos_fijos: Object.values(reportData.gastos_fijos.total).reduce((a,b)=>a+b, 0), gastos_variables: Object.values(reportData.gastos_variables.total).reduce((a,b)=>a+b, 0), ahorro: Object.values(reportData.ahorro.total).reduce((a,b)=>a+b, 0), }, flujo_neto: Object.values(reportData.net).reduce((a,b)=>a+b, 0) };
-                const prompt = `Actúa como asesor financiero experto. Analiza este resumen P&L (en USD): ${JSON.stringify(summary)}. Dame 3 puntos clave breves en español con emojis: 1. Salud financiera general. 2. Observación sobre gastos. 3. Recomendación de ahorro. Sé directo y motivador.`;
-                const result = await callGemini(prompt);
-                setAnalysis(result || "No se pudo generar el análisis.");
-                setAnalyzing(false);
-            };
-
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)]" },
                 React.createElement('div', { className: "p-4 bg-white border-b border-gray-200" },
                     React.createElement('div', { className: "flex justify-between items-center mb-4" },
                         React.createElement('h2', { className: "text-2xl font-bold text-gray-900" }, "Reporte P&L"),
                          React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-gray-100 rounded-lg px-3 py-1 text-sm font-bold" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual"))
                     ),
-                    React.createElement('div', { className: "flex gap-2 text-sm mb-4" }, React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }), React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" })),
-                    React.createElement(Button, { onClick: handleAnalyze, variant: "magic", disabled: analyzing }, analyzing ? "Analizando..." : React.createElement(React.Fragment, null, React.createElement(Sparkles, { size: 18 }), " Analizar con IA")),
-                    analysis && React.createElement('div', { className: "mt-3 p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-800 whitespace-pre-line leading-relaxed" }, analysis)
+                    React.createElement('div', { className: "flex gap-2 text-sm mb-4" }, React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }), React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }))
                 ),
                 React.createElement('div', { className: "flex-1 overflow-auto bg-white pnl-table-container pb-20" },
                     React.createElement('table', { className: "pnl-table" },
@@ -442,6 +530,7 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
+            const [currentProfile, setCurrentProfile] = useState(null); // ID del perfil seleccionado
             const [rates, setRates] = useState({ bcv: 36.5, parallel: 40.2 });
             const [transactions, setTransactions] = useState([]);
             const [pnlStructure, setPnlStructure] = useState(DEFAULT_PNL);
@@ -453,39 +542,61 @@
                 onAuthStateChanged(auth, setUser);
             }, []);
 
+            // Efecto para cargar datos solo cuando hay usuario y perfil seleccionado
             useEffect(() => {
-                if (!user) return;
+                if (!user || !currentProfile) return;
                 
-                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates');
+                // Usamos el ID del perfil seleccionado (user_01, user_02...) para separar los datos
+                const userPath = currentProfile;
+                
+                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); else setDoc(ratesRef, { bcv: 36.5, parallel: 40.2 }); });
-                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl');
+
+                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
+
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
-                const unsubTrans = onSnapshot(q, (snapshot) => { let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})); data.sort((a, b) => new Date(b.date) - new Date(a.date)); setTransactions(data); });
+                const unsubTrans = onSnapshot(q, (snapshot) => { 
+                    let data = snapshot.docs
+                        .map(d => ({id: d.id, ...d.data()}))
+                        .filter(t => t.profileId === currentProfile); // FILTRO EN MEMORIA
+                    
+                    data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
+                    setTransactions(data); 
+                });
 
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); };
-            }, [user]);
+            }, [user, currentProfile]);
 
-            const updateRates = async (newRates) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updatePnl = async (newPnl) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl'), newPnl); };
+            const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
+            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
 
-            if (!user) return React.createElement(LoginScreen);
+            // Renderizar Login si no hay perfil seleccionado (o no hay usuario)
+            if (!user || !currentProfile) {
+                return React.createElement(LoginScreen, { onSelectProfile: (id) => setCurrentProfile(id) });
+            }
+            
+            // Etiqueta del perfil actual
+            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; // user_01 -> Usuario 01
 
             return React.createElement('div', { className: "h-screen w-full bg-gray-50 flex flex-col" },
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
-                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowAddModal(true), onOpenConfig: () => setShowConfigModal(true) }) :
+                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowAddModal(true), onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions }) :
                     currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure }) : null
                 ),
+
                 currentTab === 'home' && React.createElement('div', { className: "fixed bottom-24 left-1/2 transform -translate-x-1/2 z-40 safe-bottom" },
                     React.createElement('button', { onClick: () => setShowAddModal(true), className: "bg-emerald-600 text-white p-4 rounded-full shadow-xl shadow-emerald-200 hover:scale-105 transition-transform" }, React.createElement(Plus, { size: 28 }))
                 ),
+
                 React.createElement('nav', { className: "bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-30 safe-bottom" },
                     React.createElement('button', { onClick: () => setCurrentTab('home'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'home' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Home, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Inicio")),
                     React.createElement('button', { onClick: () => setCurrentTab('history'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'history' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(History, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Historial")),
                      React.createElement('button', { onClick: () => setCurrentTab('report'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'report' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(FileSpreadsheet, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Reporte"))
                 ),
-                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure }),
+
+                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure, profileId: currentProfile }),
                 showConfigModal && React.createElement(PnLConfigModal, { onClose: () => setShowConfigModal(false), pnlData: pnlStructure, onUpdatePnl: updatePnl })
             );
         };
