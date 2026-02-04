@@ -27,12 +27,12 @@
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         
-        /* Estilos para la tabla */
+        /* Estilos para la tabla P&L */
         .pnl-table-container { overflow-x: auto; position: relative; }
         .pnl-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.75rem; }
         .pnl-cell { padding: 8px 12px; white-space: nowrap; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #f3f4f6; text-align: right; }
         .pnl-cell-head { font-weight: bold; background-color: #f9fafb; position: sticky; top: 0; z-index: 10; text-align: center; border-bottom: 2px solid #e5e7eb; }
-        .pnl-col-sticky { position: sticky; left: 0; background-color: white; z-index: 20; border-right: 2px solid #e5e7eb; text-align: left; min-width: 140px; }
+        .pnl-col-sticky { position: sticky; left: 0; background-color: white; z-index: 20; border-right: 2px solid #e5e7eb; text-align: left; min-width: 120px; }
         .pnl-col-sticky.pnl-cell-head { z-index: 30; } 
         .pnl-row-group-header { background-color: #f3f4f6; font-weight: bold; color: #374151; }
         .pnl-row-total { background-color: #fdfbf7; font-weight: bold; }
@@ -89,7 +89,7 @@
         }
 
         // --- CONSTANTES ---
-        const DEFAULT_STRUCTURE = {
+        const DEFAULT_PNL = {
             ingresos: ["Sueldo", "Honorarios", "Ventas", "Cambio Divisas"],
             gastos_fijos: ["Alquiler", "Internet", "Condominio", "Colegio", "Suscripciones"],
             gastos_variables: ["Mercado", "Salidas", "Salud", "Transporte", "Gustos"],
@@ -274,7 +274,7 @@
             );
         };
 
-        const AddTransactionModal = ({ onClose, rates, userId, structure, profileId }) => {
+        const AddTransactionModal = ({ onClose, rates, userId, pnlStructure, profileId }) => {
             const [segment, setSegment] = useState('gastos_variables'); 
             const [amount, setAmount] = useState('');
             const [currency, setCurrency] = useState('VES');
@@ -287,10 +287,11 @@
             const [recurrence, setRecurrence] = useState('none');
 
             useEffect(() => {
-                const concepts = structure[segment] || [];
+                // Si pnlStructure no está definido aún, usar array vacío para evitar crash
+                const concepts = (pnlStructure && pnlStructure[segment]) || [];
                 if (concepts.length > 0 && !category) setCategory(concepts[0]);
-                else setCategory("");
-            }, [segment, structure]);
+                else if (concepts.length === 0) setCategory("");
+            }, [segment, pnlStructure]);
 
             const calculatedUSD = useMemo(() => {
                 if (!amount) return 0;
@@ -312,7 +313,6 @@
                 const type = SEGMENTS[segment].type;
                 const date = new Date().toISOString();
                 
-                // 1. Save Transaction (Actual)
                 await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { 
                     type, 
                     segment, 
@@ -326,7 +326,6 @@
                     profileId 
                 });
 
-                // 2. Save Recurring Rule (Projection)
                 if (recurrence !== 'none') {
                     await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'recurring'), {
                         frequency: recurrence, startDate: date, type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, profileId
@@ -358,7 +357,7 @@
                             ),
                             rateType === 'manual' && React.createElement('input', { type: "number", value: customRate, onChange: e => setCustomRate(e.target.value), className: "w-full mt-2 p-2 rounded border border-blue-200 text-center font-bold text-blue-600", placeholder: "Tasa personalizada" })
                         ),
-                        React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, `Concepto (${SEGMENTS[segment].label})`), React.createElement('select', { value: category, onChange: e => setCategory(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200" }, (structure[segment] || []).map(c => React.createElement('option', { key: c, value: c }, c)))),
+                        React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, `Concepto (${SEGMENTS[segment].label})`), React.createElement('select', { value: category, onChange: e => setCategory(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200" }, (pnlStructure && pnlStructure[segment] ? pnlStructure[segment] : []).map(c => React.createElement('option', { key: c, value: c }, c)))),
                         React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, "Nota (Opcional)"), React.createElement('input', { type: "text", value: description, onChange: e => setDescription(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200", placeholder: "Ej. Panadería" })),
                         
                         // RECURRENCE FIELD
@@ -443,7 +442,7 @@
             );
         };
         
-        const ReportView = ({ transactions, structure, recurringRules }) => {
+        const PnLReportView = ({ transactions, pnlStructure, recurringRules }) => {
             const [granularity, setGranularity] = useState('monthly');
             const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
             // Default 1 mes despues
@@ -475,7 +474,7 @@
                 const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro'];
                 segments.forEach(seg => {
                     data[seg] = { concepts: {}, total: {} };
-                    (structure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); });
+                    (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); });
                     periods.forEach(p => data[seg].total[p.id] = 0);
                 });
                 periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; });
@@ -535,7 +534,7 @@
                 });
 
                 return data;
-            }, [transactions, recurringRules, periods, granularity, startDate, endDate, structure]);
+            }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)]" },
                 React.createElement('div', { className: "px-4 pb-4 bg-white border-b border-gray-200", style: { paddingTop: "calc(env(safe-area-inset-top) + 20px)" } },
@@ -586,7 +585,7 @@
             const [rates, setRates] = useState({ bcv: 36.5, parallel: 40.2 });
             const [transactions, setTransactions] = useState([]);
             const [recurringRules, setRecurringRules] = useState([]);
-            const [structure, setStructure] = useState(DEFAULT_STRUCTURE);
+            const [pnlStructure, setPnlStructure] = useState(DEFAULT_PNL);
             const [showAddModal, setShowAddModal] = useState(false);
             const [showConfigModal, setShowConfigModal] = useState(false);
             const [currentTab, setCurrentTab] = useState('home');
@@ -606,8 +605,8 @@
                 const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); else setDoc(ratesRef, { bcv: 36.5, parallel: 40.2 }); });
 
-                const structureRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `structure_${currentProfile}`);
-                const unsubStructure = onSnapshot(structureRef, (doc) => { if (doc.exists()) setStructure(doc.data()); else setDoc(structureRef, DEFAULT_STRUCTURE); });
+                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
+                const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
 
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
@@ -628,11 +627,11 @@
                     setRecurringRules(data); 
                 });
 
-                return () => { unsubRates(); unsubTrans(); unsubStructure(); unsubRec(); };
+                return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); };
             }, [user, currentProfile]);
 
             const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updateStructure = async (newStructure) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `structure_${currentProfile}`), newStructure); };
+            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
 
             // Renderizar Login si no hay perfil seleccionado (o no hay usuario)
             if (!user || !currentProfile) {
@@ -646,8 +645,8 @@
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
                     currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowAddModal(true), onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions }) :
-                    currentTab === 'report' ? React.createElement(ReportView, { transactions, structure, recurringRules }) : 
-                    currentTab === 'config' ? React.createElement(ConfigView, { pnlData: structure, onUpdatePnl: updateStructure }) : null
+                    currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure, recurringRules }) : 
+                    currentTab === 'config' ? React.createElement(ConfigView, { pnlData: pnlStructure, onUpdatePnl: updatePnl }) : null
                 ),
 
                 currentTab === 'home' && React.createElement('div', { className: "fixed bottom-24 left-1/2 transform -translate-x-1/2 z-40 safe-bottom" },
@@ -661,8 +660,8 @@
                      React.createElement('button', { onClick: () => setCurrentTab('config'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'config' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Settings, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Configuración"))
                 ),
 
-                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure: structure, profileId: currentProfile }),
-                showConfigModal && React.createElement(ConfigView, { onClose: () => setShowConfigModal(false), pnlData: structure, onUpdatePnl: updateStructure })
+                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure: pnlStructure, profileId: currentProfile }),
+                showConfigModal && React.createElement(ConfigView, { onClose: () => setShowConfigModal(false), pnlData: pnlStructure, onUpdatePnl: updatePnl })
             );
         };
 
