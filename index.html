@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Finanzas VE</title>
+    <title>Sencillo</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,7 +27,7 @@
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         
-        /* Estilos para la tabla P&L */
+        /* Estilos para la tabla */
         .pnl-table-container { overflow-x: auto; position: relative; }
         .pnl-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.75rem; }
         .pnl-cell { padding: 8px 12px; white-space: nowrap; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #f3f4f6; text-align: right; }
@@ -37,7 +37,7 @@
         .pnl-row-group-header { background-color: #f3f4f6; font-weight: bold; color: #374151; }
         .pnl-row-total { background-color: #fdfbf7; font-weight: bold; }
         .pnl-row-net { background-color: #ecfdf5; font-weight: 800; color: #047857; }
-        .pnl-row-available { background-color: #eff6ff; font-weight: 800; color: #1d4ed8; border-top: 2px solid #dbeafe; border-bottom: 2px solid #dbeafe; } /* Nueva fila de Disponible */
+        .pnl-row-available { background-color: #eff6ff; font-weight: 800; color: #1d4ed8; border-top: 2px solid #dbeafe; border-bottom: 2px solid #dbeafe; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans overflow-hidden">
@@ -50,7 +50,7 @@
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
             LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
-            Users, User
+            Users, User, Check, Repeat
         } from 'lucide-react';
 
         // --- FIREBASE ---
@@ -89,7 +89,7 @@
         }
 
         // --- CONSTANTES ---
-        const DEFAULT_PNL = {
+        const DEFAULT_STRUCTURE = {
             ingresos: ["Sueldo", "Honorarios", "Ventas", "Cambio Divisas"],
             gastos_fijos: ["Alquiler", "Internet", "Condominio", "Colegio", "Suscripciones"],
             gastos_variables: ["Mercado", "Salidas", "Salud", "Transporte", "Gustos"],
@@ -101,6 +101,13 @@
             ahorro: { label: "Ahorro", color: "text-blue-600", bg: "bg-blue-100", type: "expense" },
             gastos_fijos: { label: "Gastos Fijos", color: "text-orange-600", bg: "bg-orange-100", type: "expense" },
             gastos_variables: { label: "Gastos Variables", color: "text-rose-600", bg: "bg-rose-100", type: "expense" }
+        };
+
+        const RECURRENCE_OPTIONS = {
+            none: "No repetir",
+            weekly: "Semanalmente",
+            monthly: "Mensualmente",
+            yearly: "Anualmente"
         };
 
         // --- COMPONENTES UI ---
@@ -173,8 +180,8 @@
                     React.createElement('div', { className: "w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600" },
                         React.createElement(Users, { size: 40 })
                     ),
-                    React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, "Finanzas VE"),
-                    React.createElement('p', { className: "text-gray-500 mb-8" }, "¿Quién eres hoy?"),
+                    React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, "Sencillo"),
+                    React.createElement('p', { className: "text-gray-500 mb-8" }, "Tus cuentas claras en Venezuela"),
                     
                     errorMsg && React.createElement('div', { className: "mb-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 text-left font-medium" }, errorMsg),
 
@@ -195,10 +202,13 @@
             );
         };
 
-        const PnLConfigModal = ({ onClose, pnlData, onUpdatePnl }) => {
+        const ConfigView = ({ pnlData, onUpdatePnl }) => {
             const [localPnl, setLocalPnl] = useState(pnlData);
             const [newConcept, setNewConcept] = useState("");
             const [activeSegment, setActiveSegment] = useState("ingresos"); 
+            const [isSaved, setIsSaved] = useState(false);
+
+            useEffect(() => setLocalPnl(pnlData), [pnlData]);
 
             const handleAdd = () => {
                 if (!newConcept.trim()) return;
@@ -214,57 +224,57 @@
 
             const handleSave = () => {
                 onUpdatePnl(localPnl);
-                onClose();
+                setIsSaved(true);
+                setTimeout(() => setIsSaved(false), 2000);
             };
 
-            return React.createElement('div', { className: "fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center animate-in fade-in" },
-                React.createElement('div', { className: "bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl h-[90vh] sm:h-[80vh] flex flex-col" },
-                    React.createElement('div', { className: "flex justify-between items-center mb-4" },
-                        React.createElement('h2', { className: "text-xl font-bold flex items-center gap-2" }, React.createElement(List, { size: 24, className: "text-indigo-600" }), "Configurar P&L"),
-                        React.createElement('button', { onClick: onClose, className: "p-2 bg-gray-100 rounded-full" }, React.createElement(X, { size: 20 }))
-                    ),
+            return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)]" },
+                React.createElement('div', { className: "p-4 bg-white border-b border-gray-200" },
+                    React.createElement('h2', { className: "text-2xl font-bold text-gray-900 mb-1" }, "Configuración"),
+                    React.createElement('p', { className: "text-sm text-gray-500" }, "Personaliza tus categorías")
+                ),
 
-                    React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide" },
-                        ["ingresos", "gastos_fijos", "gastos_variables"].map(seg => 
+                React.createElement('div', { className: "flex-1 overflow-y-auto p-4 pb-32" },
+                    React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide" },
+                        ["ingresos", "ahorro", "gastos_fijos", "gastos_variables"].map(seg => 
                             React.createElement('button', {
                                 key: seg,
                                 onClick: () => setActiveSegment(seg),
-                                className: `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${activeSegment === seg ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`
+                                className: `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${activeSegment === seg ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600'}`
                             }, SEGMENTS[seg].label)
                         )
                     ),
                     
-                    React.createElement('div', { className: "bg-indigo-50 p-4 rounded-xl mb-4" },
-                        React.createElement('p', { className: "text-xs text-indigo-500 font-bold uppercase mb-2" }, `Agregar a ${SEGMENTS[activeSegment].label}`),
+                    React.createElement('div', { className: "bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6" },
+                        React.createElement('p', { className: "text-xs text-indigo-500 font-bold uppercase mb-3" }, `Agregar a ${SEGMENTS[activeSegment].label}`),
                         React.createElement('div', { className: "flex gap-2" },
                             React.createElement('input', { 
                                 value: newConcept, 
                                 onChange: (e) => setNewConcept(e.target.value),
                                 placeholder: "Nuevo concepto...",
-                                className: "flex-1 p-2 rounded-lg border border-indigo-200 focus:outline-none focus:border-indigo-500"
+                                className: "flex-1 p-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-gray-50"
                             }),
-                            React.createElement('button', { onClick: handleAdd, className: "bg-indigo-600 text-white p-2 rounded-lg" }, React.createElement(Plus, { size: 20 }))
+                            React.createElement('button', { onClick: handleAdd, className: "bg-indigo-600 text-white p-3 rounded-xl shadow-lg shadow-indigo-200" }, React.createElement(Plus, { size: 20 }))
                         )
                     ),
 
-                    React.createElement('div', { className: "flex-1 overflow-y-auto space-y-2 pr-1" },
+                    React.createElement('div', { className: "space-y-2" },
                         (localPnl[activeSegment] || []).map((concept, idx) => 
-                            React.createElement('div', { key: idx, className: "flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100" },
+                            React.createElement('div', { key: idx, className: "flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm" },
                                 React.createElement('span', { className: "font-medium text-gray-700" }, concept),
-                                React.createElement('button', { onClick: () => handleDelete(activeSegment, idx), className: "text-red-400 hover:text-red-600 p-1" }, React.createElement(Trash2, { size: 16 }))
+                                React.createElement('button', { onClick: () => handleDelete(activeSegment, idx), className: "text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors" }, React.createElement(Trash2, { size: 18 }))
                             )
                         )
                     ),
 
-                    React.createElement('div', { className: "pt-4 border-t border-gray-100 mt-4" },
-                         React.createElement('p', { className: "text-xs text-gray-400 text-center mb-3" }, "Nota: El segmento 'Ahorro' es fijo."),
-                        React.createElement(Button, { onClick: handleSave, variant: "indigo" }, "Guardar Estructura")
+                    React.createElement('div', { className: "mt-8" },
+                         React.createElement(Button, { onClick: handleSave, variant: "indigo" }, isSaved ? React.createElement(React.Fragment, null, React.createElement(Check, {size: 18}), " ¡Guardado!") : "Guardar Cambios")
                     )
                 )
             );
         };
 
-        const AddTransactionModal = ({ onClose, rates, userId, pnlStructure, profileId }) => {
+        const AddTransactionModal = ({ onClose, rates, userId, structure, profileId }) => {
             const [segment, setSegment] = useState('gastos_variables'); 
             const [amount, setAmount] = useState('');
             const [currency, setCurrency] = useState('VES');
@@ -272,12 +282,15 @@
             const [description, setDescription] = useState('');
             const [rateType, setRateType] = useState('bcv');
             const [customRate, setCustomRate] = useState(rates.bcv || 0);
+            
+            // New Recurrence State
+            const [recurrence, setRecurrence] = useState('none');
 
             useEffect(() => {
-                const concepts = pnlStructure[segment] || [];
+                const concepts = structure[segment] || [];
                 if (concepts.length > 0 && !category) setCategory(concepts[0]);
                 else setCategory("");
-            }, [segment, pnlStructure]);
+            }, [segment, structure]);
 
             const calculatedUSD = useMemo(() => {
                 if (!amount) return 0;
@@ -297,8 +310,9 @@
 
                 const finalRate = currency === 'USD' ? 1 : (rateType === 'bcv' ? rates.bcv : (rateType === 'parallel' ? rates.parallel : customRate));
                 const type = SEGMENTS[segment].type;
+                const date = new Date().toISOString();
                 
-                // FIX: Usar ruta 'artifacts/{appId}/users/{userId}/transactions'
+                // 1. Save Transaction (Actual)
                 await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { 
                     type, 
                     segment, 
@@ -308,9 +322,17 @@
                     amountUSD: calculatedUSD, 
                     category, 
                     description, 
-                    date: new Date().toISOString(),
+                    date, 
                     profileId 
                 });
+
+                // 2. Save Recurring Rule (Projection)
+                if (recurrence !== 'none') {
+                    await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'recurring'), {
+                        frequency: recurrence, startDate: date, type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, profileId
+                    });
+                }
+
                 onClose();
             };
 
@@ -336,8 +358,15 @@
                             ),
                             rateType === 'manual' && React.createElement('input', { type: "number", value: customRate, onChange: e => setCustomRate(e.target.value), className: "w-full mt-2 p-2 rounded border border-blue-200 text-center font-bold text-blue-600", placeholder: "Tasa personalizada" })
                         ),
-                        React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, `Concepto (${SEGMENTS[segment].label})`), React.createElement('select', { value: category, onChange: e => setCategory(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200" }, (pnlStructure[segment] || []).map(c => React.createElement('option', { key: c, value: c }, c)))),
+                        React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, `Concepto (${SEGMENTS[segment].label})`), React.createElement('select', { value: category, onChange: e => setCategory(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200" }, (structure[segment] || []).map(c => React.createElement('option', { key: c, value: c }, c)))),
                         React.createElement('div', { className: "space-y-1" }, React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1" }, "Nota (Opcional)"), React.createElement('input', { type: "text", value: description, onChange: e => setDescription(e.target.value), className: "w-full p-3 bg-gray-50 rounded-xl border border-gray-200", placeholder: "Ej. Panadería" })),
+                        
+                        // RECURRENCE FIELD
+                        React.createElement('div', { className: "space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-200" },
+                            React.createElement('label', { className: "text-xs font-bold text-gray-500 flex items-center gap-1" }, React.createElement(Repeat, { size: 14 }), " Repetir (Proyectar a futuro)"),
+                            React.createElement('select', { value: recurrence, onChange: e => setRecurrence(e.target.value), className: "w-full p-2 bg-white rounded-lg border border-gray-300 text-sm" }, Object.entries(RECURRENCE_OPTIONS).map(([key, label]) => React.createElement('option', { key: key, value: key }, label)))
+                        ),
+
                         React.createElement('div', { className: "text-center pt-2" }, React.createElement('span', { className: "text-gray-400 text-sm" }, "Monto final: "), React.createElement('span', { className: "text-xl font-bold text-emerald-600" }, `$${calculatedUSD.toFixed(2)}`)),
                         React.createElement(Button, { type: "submit", className: "mt-2" }, "Guardar Movimiento")
                     )
@@ -352,6 +381,14 @@
 
             useEffect(() => setTempRates(rates), [rates]);
             const handleSave = () => { onUpdateRate(tempRates); setIsEditing(false); };
+
+            // Cálculo de Brecha
+            const gap = useMemo(() => {
+                if (!rates.bcv || !rates.parallel) return 0;
+                return ((rates.parallel - rates.bcv) / rates.bcv) * 100;
+            }, [rates]);
+
+            const today = new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'numeric' });
 
             const fetchLiveRates = async () => {
                 setIsRefreshing(true);
@@ -368,14 +405,27 @@
             };
 
             if (isEditing) { return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" }, React.createElement('div', { className: "flex justify-between items-center mb-3" }, React.createElement('h3', { className: "text-sm font-bold text-indigo-800 uppercase" }, "Editar Tasas"), React.createElement('button', { onClick: handleSave, className: "text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg font-bold" }, "Guardar")), React.createElement('div', { className: "grid grid-cols-2 gap-4" }, React.createElement('div', null, React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "BCV"), React.createElement('input', { type: "number", value: tempRates.bcv, onChange: e => setTempRates({...tempRates, bcv: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })), React.createElement('div', null, React.createElement('label', { className: "text-[10px] text-indigo-400 font-bold block mb-1" }, "PARALELO"), React.createElement('input', { type: "number", value: tempRates.parallel, onChange: e => setTempRates({...tempRates, parallel: e.target.value}), className: "w-full p-2 rounded-lg text-center font-bold text-indigo-700" })))); }
-            return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" }, React.createElement('div', { className: "flex justify-between items-center mb-3" }, React.createElement('h3', { className: "text-xs font-bold text-indigo-400 uppercase tracking-widest" }, "Tasas del Día"), React.createElement('div', { className: "flex gap-2" }, React.createElement('button', { onClick: fetchLiveRates, className: `p-1 hover:bg-indigo-100 rounded-full text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}` }, React.createElement(RefreshCw, { size: 16 })), React.createElement('button', { onClick: () => setIsEditing(true), className: "p-1 hover:bg-indigo-100 rounded-full text-indigo-400" }, React.createElement(Settings, { size: 16 })))), React.createElement('div', { className: "flex justify-around items-center" }, React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.bcv), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "BCV")), React.createElement('div', { className: "h-8 w-px bg-indigo-200" }), React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.parallel), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "PARALELO"))));
+            return React.createElement(Card, { className: "bg-indigo-50 border-indigo-100" }, 
+                React.createElement('div', { className: "flex justify-between items-center mb-3" }, 
+                    React.createElement('div', { className: "flex items-baseline gap-2" },
+                        React.createElement('h3', { className: "text-xs font-bold text-indigo-400 uppercase tracking-widest" }, "Tasas del Día"),
+                        React.createElement('span', { className: "text-xs font-medium text-indigo-300" }, today)
+                    ),
+                    React.createElement('div', { className: "flex gap-2" }, React.createElement('button', { onClick: fetchLiveRates, className: `p-1 hover:bg-indigo-100 rounded-full text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}` }, React.createElement(RefreshCw, { size: 16 })), React.createElement('button', { onClick: () => setIsEditing(true), className: "p-1 hover:bg-indigo-100 rounded-full text-indigo-400" }, React.createElement(Settings, { size: 16 })))
+                ), 
+                React.createElement('div', { className: "flex justify-around items-center" }, React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.bcv), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "BCV")), React.createElement('div', { className: "h-8 w-px bg-indigo-200" }), React.createElement('div', { className: "text-center" }, React.createElement('p', { className: "text-2xl font-bold text-indigo-900" }, rates.parallel), React.createElement('p', { className: "text-[10px] font-bold text-indigo-400" }, "PARALELO"))),
+                React.createElement('div', { className: "mt-4 pt-3 border-t border-indigo-100 flex justify-center items-center gap-2" },
+                    React.createElement('span', { className: "text-xs text-indigo-400 font-medium" }, "Brecha cambiaria:"),
+                    React.createElement('span', { className: `text-xs font-bold px-2 py-0.5 rounded-full ${gap > 10 ? 'bg-red-100 text-red-600' : gap > 5 ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}` }, `${gap.toFixed(2)}%`)
+                )
+            );
         };
 
         const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onOpenConfig, currentProfileLabel, onLogout }) => {
             const balance = transactions.reduce((acc, curr) => { return curr.type === 'income' ? acc + (curr.amountUSD || 0) : acc - (curr.amountUSD || 0); }, 0);
             const recent = transactions.slice(0, 5);
-            return React.createElement('div', { className: "p-5 pb-32 space-y-6" },
-                React.createElement('header', { className: "flex justify-between items-center pt-2" }, React.createElement('div', null, React.createElement('h1', { className: "text-2xl font-bold text-gray-800" }, "Mi Billetera"), React.createElement('p', { className: "text-sm text-gray-500" }, `${currentProfileLabel} - P&L 🇻🇪`)), React.createElement('button', { onClick: onOpenConfig, className: "w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200" }, React.createElement(List, { size: 20 }))),
+            return React.createElement('div', { className: "px-5 pb-32 space-y-6", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
+                React.createElement('header', { className: "flex justify-between items-center pt-2" }, React.createElement('div', null, React.createElement('h1', { className: "text-2xl font-bold text-gray-800" }, "Sencillo"), React.createElement('p', { className: "text-sm text-gray-500" }, `${currentProfileLabel} - Finanzas 🇻🇪`)), React.createElement('button', { onClick: onLogout, className: "w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200" }, React.createElement(LogOut, { size: 20 }))),
                 React.createElement('div', { className: "bg-emerald-600 text-white p-6 rounded-3xl shadow-lg shadow-emerald-200" }, React.createElement('p', { className: "text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1" }, "Cash Flow Disponible"), React.createElement('h2', { className: "text-4xl font-bold mb-4" }, `$${balance.toFixed(2)}`), React.createElement('div', { className: "flex gap-3" }, React.createElement('button', { onClick: onOpenAdd, className: "flex-1 bg-white/20 hover:bg-white/30 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 backdrop-blur-sm transition-colors" }, React.createElement(Plus, { size: 16 }), "Registrar"))),
                 React.createElement(RatesCard, { rates, onUpdateRate }),
                 React.createElement('div', null, React.createElement('div', { className: "flex justify-between items-end mb-4" }, React.createElement('h3', { className: "font-bold text-gray-700" }, "Recientes"), React.createElement('span', { className: "text-xs text-emerald-600 font-medium" }, "Ver todo")), React.createElement('div', { className: "space-y-3" }, recent.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm" }, React.createElement('div', { className: "flex items-center gap-3" }, React.createElement('div', { className: `w-10 h-10 rounded-full flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}` }, t.type === 'income' ? React.createElement(TrendingUp, { size: 18 }) : React.createElement(TrendingDown, { size: 18 })), React.createElement('div', null, React.createElement('p', { className: "font-bold text-sm text-gray-800" }, t.category), React.createElement('p', { className: "text-xs text-gray-400" }, t.segment ? SEGMENTS[t.segment]?.label : (t.type === 'income' ? 'Ingreso' : 'Gasto')))), React.createElement('div', { className: "text-right" }, React.createElement('p', { className: `font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}` }, t.type === 'income' ? '+' : '-', `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('p', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? `$${t.amount}` : `Bs. ${t.amount}`)))))),
@@ -386,20 +436,20 @@
         };
 
         const HistoryView = ({ transactions }) => {
-             return React.createElement('div', { className: "p-5 pb-32 space-y-4 pt-[env(safe-area-inset-top)]" }, React.createElement('h2', { className: "text-2xl font-bold text-gray-900 mb-4" }, "Historial P&L"), React.createElement('div', { className: "space-y-3" }, transactions.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center" }, React.createElement('div', { className: "flex flex-col" }, React.createElement('span', { className: "font-bold text-gray-800" }, t.category), React.createElement('span', { className: "text-xs px-2 py-0.5 rounded-md w-fit mt-1 " + (t.segment ? SEGMENTS[t.segment].bg + " " + SEGMENTS[t.segment].color : "bg-gray-100 text-gray-500") }, t.segment ? SEGMENTS[t.segment].label : (t.type === 'income' ? 'Ingreso' : 'Gasto'))), React.createElement('div', { className: "text-right" }, React.createElement('span', { className: `block font-bold ${t.type === 'income' ? 'text-green-600' : 'text-gray-800'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('span', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`)
+             return React.createElement('div', { className: "px-5 pb-32 space-y-4", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } }, React.createElement('h2', { className: "text-2xl font-bold text-gray-900 mb-4" }, "Historial de Movimientos"), React.createElement('div', { className: "space-y-3" }, transactions.map(t => React.createElement('div', { key: t.id, className: "bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center" }, React.createElement('div', { className: "flex flex-col" }, React.createElement('span', { className: "font-bold text-gray-800" }, t.category), React.createElement('span', { className: "text-xs px-2 py-0.5 rounded-md w-fit mt-1 " + (t.segment ? SEGMENTS[t.segment].bg + " " + SEGMENTS[t.segment].color : "bg-gray-100 text-gray-500") }, t.segment ? SEGMENTS[t.segment].label : (t.type === 'income' ? 'Ingreso' : 'Gasto'))), React.createElement('div', { className: "text-right" }, React.createElement('span', { className: `block font-bold ${t.type === 'income' ? 'text-green-600' : 'text-gray-800'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('span', { className: "text-xs text-gray-400" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`)
                          )
                     ))
                 )
             );
         };
         
-        const PnLReportView = ({ transactions, pnlStructure }) => {
+        const ReportView = ({ transactions, structure, recurringRules }) => {
             const [granularity, setGranularity] = useState('monthly');
             const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
             // Default 1 mes despues
             const [endDate, setEndDate] = useState(() => {
                 const d = new Date();
-                d.setMonth(d.getMonth() + 1);
+                d.setMonth(d.getMonth() + 1); // 1 mes por defecto
                 return d.toISOString().split('T')[0];
             });
 
@@ -421,18 +471,26 @@
             }, [startDate, endDate, granularity]);
 
             const reportData = useMemo(() => {
-                const data = { net: {}, available: {} }; // Added 'available' bucket
+                const data = { net: {}, available: {} }; 
                 const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro'];
                 segments.forEach(seg => {
                     data[seg] = { concepts: {}, total: {} };
-                    (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); });
+                    (structure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); });
                     periods.forEach(p => data[seg].total[p.id] = 0);
                 });
-                periods.forEach(p => {
-                    data.net[p.id] = 0;
-                    data.available[p.id] = 0; // Init available
-                });
+                periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; });
 
+                const addToData = (item, periodId) => {
+                     if (periodId && data[item.segment]) {
+                        const amount = item.amountUSD || 0;
+                        if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); }
+                        if (data[item.segment].concepts[item.category][periodId] !== undefined) data[item.segment].concepts[item.category][periodId] += amount;
+                        data[item.segment].total[periodId] += amount;
+                        if (SEGMENTS[item.segment].type === 'income') data.net[periodId] += amount; else data.net[periodId] -= amount;
+                    }
+                };
+
+                // 1. Process Real Transactions
                 transactions.forEach(t => {
                     const tDate = new Date(t.date);
                     if (tDate < new Date(startDate) || tDate > new Date(endDate + "T23:59:59")) return;
@@ -441,15 +499,31 @@
                     else if (granularity === 'monthly') pId = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`;
                     else if (granularity === 'yearly') pId = `${tDate.getFullYear()}`;
                     else if (granularity === 'weekly') { const tTime = tDate.getTime(); const period = periods.find((p, i) => { const pStart = new Date(p.id).getTime(); const nextP = periods[i+1]; const pEnd = nextP ? new Date(nextP.id).getTime() : Infinity; return tTime >= pStart && tTime < pEnd; }); if(period) pId = period.id; }
-                    
-                    if (pId && data[t.segment]) {
-                        const amount = t.amountUSD || 0;
-                        if (!data[t.segment].concepts[t.category]) { data[t.segment].concepts[t.category] = {}; periods.forEach(p => data[t.segment].concepts[t.category][p.id] = 0); }
-                        if (data[t.segment].concepts[t.category][pId] !== undefined) data[t.segment].concepts[t.category][pId] += amount;
-                        data[t.segment].total[pId] += amount;
-                        
-                        // Net logic: Income - All Expenses (including Savings if treated as outflow from pocket)
-                        if (SEGMENTS[t.segment].type === 'income') data.net[pId] += amount; else data.net[pId] -= amount;
+                    addToData(t, pId);
+                });
+
+                // 2. Process Recurring Rules (Projections)
+                recurringRules.forEach(rule => {
+                    const ruleStart = new Date(rule.startDate);
+                    const reportEnd = new Date(endDate);
+                    let current = new Date(ruleStart);
+                    const today = new Date();
+                    while (current <= reportEnd) {
+                        if (current >= new Date(startDate)) {
+                             let pId = "";
+                             if (granularity === 'daily') pId = current.toISOString().split('T')[0];
+                             else if (granularity === 'monthly') pId = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+                             else if (granularity === 'yearly') pId = `${current.getFullYear()}`;
+                             
+                             if (current > today) {
+                                 addToData(rule, pId);
+                             }
+                        }
+                        if (rule.frequency === 'daily') current.setDate(current.getDate() + 1);
+                        else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7);
+                        else if (rule.frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+                        else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+                        else break; 
                     }
                 });
 
@@ -461,12 +535,12 @@
                 });
 
                 return data;
-            }, [transactions, periods, granularity, startDate, endDate, pnlStructure]);
+            }, [transactions, recurringRules, periods, granularity, startDate, endDate, structure]);
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)]" },
-                React.createElement('div', { className: "p-4 bg-white border-b border-gray-200" },
+                React.createElement('div', { className: "px-4 pb-4 bg-white border-b border-gray-200", style: { paddingTop: "calc(env(safe-area-inset-top) + 20px)" } },
                     React.createElement('div', { className: "flex justify-between items-center mb-4" },
-                        React.createElement('h2', { className: "text-2xl font-bold text-gray-900" }, "Reporte P&L"),
+                        React.createElement('h2', { className: "text-2xl font-bold text-gray-900" }, "Estado de Resultados"),
                          React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-gray-100 rounded-lg px-3 py-1 text-sm font-bold" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual"))
                     ),
                     React.createElement('div', { className: "flex gap-2 text-sm mb-4" }, React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }), React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }))
@@ -511,7 +585,8 @@
             const [currentProfile, setCurrentProfile] = useState(null); // ID del perfil seleccionado
             const [rates, setRates] = useState({ bcv: 36.5, parallel: 40.2 });
             const [transactions, setTransactions] = useState([]);
-            const [pnlStructure, setPnlStructure] = useState(DEFAULT_PNL);
+            const [recurringRules, setRecurringRules] = useState([]);
+            const [structure, setStructure] = useState(DEFAULT_STRUCTURE);
             const [showAddModal, setShowAddModal] = useState(false);
             const [showConfigModal, setShowConfigModal] = useState(false);
             const [currentTab, setCurrentTab] = useState('home');
@@ -531,8 +606,8 @@
                 const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); else setDoc(ratesRef, { bcv: 36.5, parallel: 40.2 }); });
 
-                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
-                const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
+                const structureRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `structure_${currentProfile}`);
+                const unsubStructure = onSnapshot(structureRef, (doc) => { if (doc.exists()) setStructure(doc.data()); else setDoc(structureRef, DEFAULT_STRUCTURE); });
 
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
@@ -544,11 +619,20 @@
                     setTransactions(data); 
                 });
 
-                return () => { unsubRates(); unsubTrans(); unsubPnl(); };
+                // FIX: Corregido query de recurrentes para usar user.uid y filtrar en memoria
+                const qRec = query(collection(db, 'artifacts', appId, 'users', user.uid, 'recurring'));
+                const unsubRec = onSnapshot(qRec, (snapshot) => { 
+                    let data = snapshot.docs
+                        .map(d => ({id: d.id, ...d.data()}))
+                        .filter(t => t.profileId === currentProfile);
+                    setRecurringRules(data); 
+                });
+
+                return () => { unsubRates(); unsubTrans(); unsubStructure(); unsubRec(); };
             }, [user, currentProfile]);
 
             const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
+            const updateStructure = async (newStructure) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `structure_${currentProfile}`), newStructure); };
 
             // Renderizar Login si no hay perfil seleccionado (o no hay usuario)
             if (!user || !currentProfile) {
@@ -562,7 +646,8 @@
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
                     currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowAddModal(true), onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions }) :
-                    currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure }) : null
+                    currentTab === 'report' ? React.createElement(ReportView, { transactions, structure, recurringRules }) : 
+                    currentTab === 'config' ? React.createElement(ConfigView, { pnlData: structure, onUpdatePnl: updateStructure }) : null
                 ),
 
                 currentTab === 'home' && React.createElement('div', { className: "fixed bottom-24 left-1/2 transform -translate-x-1/2 z-40 safe-bottom" },
@@ -572,11 +657,12 @@
                 React.createElement('nav', { className: "bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-30 safe-bottom" },
                     React.createElement('button', { onClick: () => setCurrentTab('home'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'home' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Home, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Inicio")),
                     React.createElement('button', { onClick: () => setCurrentTab('history'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'history' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(History, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Historial")),
-                     React.createElement('button', { onClick: () => setCurrentTab('report'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'report' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(FileSpreadsheet, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Reporte"))
+                     React.createElement('button', { onClick: () => setCurrentTab('report'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'report' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(FileSpreadsheet, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Reporte")),
+                     React.createElement('button', { onClick: () => setCurrentTab('config'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'config' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Settings, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Configuración"))
                 ),
 
-                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure, profileId: currentProfile }),
-                showConfigModal && React.createElement(PnLConfigModal, { onClose: () => setShowConfigModal(false), pnlData: pnlStructure, onUpdatePnl: updatePnl })
+                showAddModal && React.createElement(AddTransactionModal, { onClose: () => setShowAddModal(false), rates, userId: user.uid, pnlStructure: structure, profileId: currentProfile }),
+                showConfigModal && React.createElement(ConfigView, { onClose: () => setShowConfigModal(false), pnlData: structure, onUpdatePnl: updateStructure })
             );
         };
 
