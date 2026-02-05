@@ -517,22 +517,139 @@
         
         const PnLReportView = ({ transactions, pnlStructure, recurringRules }) => {
             const [granularity, setGranularity] = useState('monthly');
-            const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+            const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
             const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]; });
-            const periods = useMemo(() => { const start = new Date(startDate); const end = new Date(endDate); const periodsArr = []; let current = new Date(start); end.setHours(23, 59, 59, 999); while (current <= end) { let label = "", id = ""; if (granularity === 'daily') { id = current.toISOString().split('T')[0]; label = current.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); current.setDate(current.getDate() + 1); } else if (granularity === 'weekly') { const lastDay = new Date(current); lastDay.setDate(lastDay.getDate() + 6); id = current.toISOString().split('T')[0]; label = `${current.getDate()}/${current.getMonth()+1}`; current.setDate(current.getDate() + 7); } else if (granularity === 'monthly') { id = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`; label = current.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }); current.setMonth(current.getMonth() + 1); } else if (granularity === 'yearly') { id = `${current.getFullYear()}`; label = `${current.getFullYear()}`; current.setFullYear(current.getFullYear() + 1); } periodsArr.push({ id, label }); } return periodsArr; }, [startDate, endDate, granularity]);
-            const reportData = useMemo(() => { const data = { net: {}, available: {} }; const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro']; segments.forEach(seg => { data[seg] = { concepts: {}, total: {} }; (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); }); periods.forEach(p => data[seg].total[p.id] = 0); }); periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; }); const addToData = (item, periodId) => { if (periodId && data[item.segment]) { const amount = item.amountUSD || 0; if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); } if (data[item.segment].concepts[item.category][periodId] !== undefined) data[item.segment].concepts[item.category][periodId] += amount; data[item.segment].total[periodId] += amount; if (SEGMENTS[item.segment].type === 'income') data.net[periodId] += amount; else data.net[periodId] -= amount; } }; transactions.forEach(t => { const tDate = new Date(t.date); if (tDate < new Date(startDate) || tDate > new Date(endDate + "T23:59:59")) return; let pId = ""; if (granularity === 'daily') pId = t.date.split('T')[0]; else if (granularity === 'monthly') pId = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`; else if (granularity === 'yearly') pId = `${tDate.getFullYear()}`; else if (granularity === 'weekly') { const tTime = tDate.getTime(); const period = periods.find((p, i) => { const pStart = new Date(p.id).getTime(); const nextP = periods[i+1]; const pEnd = nextP ? new Date(nextP.id).getTime() : Infinity; return tTime >= pStart && tTime < pEnd; }); if(period) pId = period.id; } addToData(t, pId); }); recurringRules.forEach(rule => { const ruleStart = new Date(rule.startDate); const reportEnd = new Date(endDate); let current = new Date(ruleStart); const today = new Date(); while (current <= reportEnd) { const currentStr = current.toISOString().split('T')[0]; if (currentStr >= startDate) { let pId = ""; if (granularity === 'daily') pId = currentStr; else if (granularity === 'monthly') pId = currentStr.substring(0, 7); else if (granularity === 'yearly') pId = currentStr.substring(0, 4); if (current > today) { addToData(rule, pId); } } if (rule.frequency === 'daily') current.setDate(current.getDate() + 1); else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7); else if (rule.frequency === 'monthly') current.setMonth(current.getMonth() + 1); else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1); else break; } }); periods.forEach(p => { const totalIncome = data.ingresos.total[p.id] || 0; const totalSavings = data.ahorro.total[p.id] || 0; data.available[p.id] = totalIncome - totalSavings; }); return data; }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
+
+            const periods = useMemo(() => {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const periodsArr = [];
+                let current = new Date(start);
+                end.setHours(23, 59, 59, 999);
+                while (current <= end) {
+                    let label = "", id = "";
+                    if (granularity === 'daily') { id = current.toISOString().split('T')[0]; label = current.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); current.setDate(current.getDate() + 1); } 
+                    else if (granularity === 'weekly') { const lastDay = new Date(current); lastDay.setDate(lastDay.getDate() + 6); id = current.toISOString().split('T')[0]; label = `${current.getDate()}/${current.getMonth()+1}`; current.setDate(current.getDate() + 7); } 
+                    else if (granularity === 'monthly') { id = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`; label = current.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }); current.setMonth(current.getMonth() + 1); } 
+                    else if (granularity === 'yearly') { id = `${current.getFullYear()}`; label = `${current.getFullYear()}`; current.setFullYear(current.getFullYear() + 1); }
+                    periodsArr.push({ id, label });
+                }
+                return periodsArr;
+            }, [startDate, endDate, granularity]);
+
+            const reportData = useMemo(() => {
+                const data = { net: {}, available: {} }; 
+                const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro'];
+                segments.forEach(seg => {
+                    data[seg] = { concepts: {}, total: {} };
+                    (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); });
+                    periods.forEach(p => data[seg].total[p.id] = 0);
+                });
+                periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; });
+
+                const addToData = (item, periodId) => {
+                     if (periodId && data[item.segment]) {
+                        const amount = item.amountUSD || 0;
+                        if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); }
+                        if (data[item.segment].concepts[item.category][periodId] !== undefined) data[item.segment].concepts[item.category][periodId] += amount;
+                        data[item.segment].total[periodId] += amount;
+                        if (SEGMENTS[item.segment].type === 'income') data.net[periodId] += amount; else data.net[periodId] -= amount;
+                    }
+                };
+
+                // 1. Process Real Transactions
+                transactions.forEach(t => {
+                    // COMPARACIÓN SEGURA POR STRING YYYY-MM-DD
+                    const tDateStr = t.date.split('T')[0];
+                    if (tDateStr < startDate || tDateStr > endDate) return;
+                    
+                    let pId = "";
+                    if (granularity === 'daily') pId = tDateStr;
+                    else if (granularity === 'monthly') pId = tDateStr.substring(0, 7);
+                    else if (granularity === 'yearly') pId = tDateStr.substring(0, 4);
+                    else if (granularity === 'weekly') { 
+                         // Simplificación para weekly
+                         const tTime = new Date(t.date).getTime(); 
+                         const period = periods.find((p, i) => { const pStart = new Date(p.id).getTime(); const nextP = periods[i+1]; const pEnd = nextP ? new Date(nextP.id).getTime() : Infinity; return tTime >= pStart && tTime < pEnd; }); 
+                         if(period) pId = period.id; 
+                    }
+                    addToData(t, pId);
+                });
+
+                // 2. Process Recurring Rules (Projections)
+                recurringRules.forEach(rule => {
+                    const ruleStart = new Date(rule.startDate);
+                    const reportEnd = new Date(endDate);
+                    let current = new Date(ruleStart);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayDate = new Date(todayStr);
+
+                    while (current <= reportEnd) {
+                        const currentStr = current.toISOString().split('T')[0];
+                        if (currentStr >= startDate) {
+                             let pId = "";
+                             if (granularity === 'daily') pId = currentStr;
+                             else if (granularity === 'monthly') pId = currentStr.substring(0, 7);
+                             else if (granularity === 'yearly') pId = currentStr.substring(0, 4);
+                             
+                             // Project only if future
+                             if (current > todayDate) {
+                                 addToData(rule, pId);
+                             }
+                        }
+                        if (rule.frequency === 'daily') current.setDate(current.getDate() + 1);
+                        else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7);
+                        else if (rule.frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+                        else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+                        else break; 
+                    }
+                });
+
+                // Calculate "Available" = Total Income - Total Savings
+                periods.forEach(p => {
+                    const totalIncome = data.ingresos.total[p.id] || 0;
+                    const totalSavings = data.ahorro.total[p.id] || 0;
+                    data.available[p.id] = totalIncome - totalSavings;
+                });
+
+                return data;
+            }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
+
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)]" },
                 React.createElement('div', { className: "px-4 pb-4 bg-white border-b border-gray-200", style: { paddingTop: "calc(env(safe-area-inset-top) + 20px)" } },
-                    React.createElement('div', { className: "flex justify-between items-center mb-4" }, React.createElement('h2', { className: "text-2xl font-bold text-gray-900" }, "Estado de Resultados"), React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-gray-100 rounded-lg px-3 py-1 text-sm font-bold" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual"))),
+                    React.createElement('div', { className: "flex justify-between items-center mb-4" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-gray-900" }, "Estado de Resultados"),
+                         React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-gray-100 rounded-lg px-3 py-1 text-sm font-bold" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual"))
+                    ),
                     React.createElement('div', { className: "flex gap-2 text-sm mb-4" }, React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }), React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 font-medium" }))
                 ),
                 React.createElement('div', { className: "flex-1 overflow-auto bg-white pnl-table-container pb-20" },
                     React.createElement('table', { className: "pnl-table" },
                         React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', { className: "pnl-cell-head pnl-col-sticky" }, "Concepto"), periods.map(p => React.createElement('th', { key: p.id, className: "pnl-cell-head min-w-[80px]" }, p.label)))),
                         React.createElement('tbody', null,
-                            ['ingresos', 'ahorro'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-600 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-gray-800" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
-                            React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "🔵 DISPONIBLE"), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))),
-                            ['gastos_fijos', 'gastos_variables'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-600 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-gray-800" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
+                            // REORDERED SEGMENTS: 1. INGRESOS, 2. AHORRO, 3. AVAILABLE (NEW), 4. GASTOS
+                            // BLOQUE 1: Ingresos
+                            ['ingresos', 'ahorro'].map(seg => 
+                                React.createElement(React.Fragment, { key: seg },
+                                    React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))),
+                                    Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-600 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))),
+                                    React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-gray-800" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString())))
+                                )
+                            ),
+                            // NEW ROW: AVAILABLE (DISPONIBLE)
+                            React.createElement('tr', null,
+                                React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "🔵 DISPONIBLE"),
+                                periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))
+                            ),
+                             // BLOQUE 2: Gastos
+                            ['gastos_fijos', 'gastos_variables'].map(seg => 
+                                React.createElement(React.Fragment, { key: seg },
+                                    React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))),
+                                    Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-600 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))),
+                                    React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-gray-800" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString())))
+                                )
+                            ),
+                            
                             React.createElement('tr', null, React.createElement('td', { colSpan: periods.length + 1, className: "h-4 bg-gray-50" })),
                             React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-net" }, "🟢 RESULTADO NETO"), periods.map(p => React.createElement('td', { key: p.id, className: `pnl-cell pnl-row-net ${reportData.net[p.id] < 0 ? 'text-red-600' : 'text-emerald-700'}` }, Math.round(reportData.net[p.id]).toLocaleString())))
                         )
@@ -557,27 +674,46 @@
                 onAuthStateChanged(auth, setUser);
             }, []);
 
+            // Efecto para cargar datos solo cuando hay usuario y perfil seleccionado
             useEffect(() => {
                 if (!user || !currentProfile) return;
-                const userPath = currentProfile;
-                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
-                const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); else setDoc(ratesRef, { bcv: 36.5, parallel: 40.2 }); });
-                // Auto-refresh rates on init
-                getRatesFromAPI().then(async (newRates) => { if (newRates && newRates.bcv && newRates.parallel) { await setDoc(ratesRef, newRates, { merge: true }); } });
                 
+                // Usamos el ID del perfil seleccionado (user_01, user_02...) para separar los datos
+                const userPath = currentProfile;
+                
+                // Usar ruta 'artifacts' correcta para settings
+                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
+                const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); });
+                
+                // Auto-refresh rates on init
+                getRatesFromAPI().then(async (newRates) => {
+                    if (newRates && newRates.bcv && newRates.parallel) {
+                        await setDoc(ratesRef, newRates, { merge: true });
+                    }
+                });
+
                 const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
+
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs
+                        .map(d => ({id: d.id, ...d.data()}))
+                        .filter(t => t.profileId === currentProfile); // FILTRO EN MEMORIA
+                    
                     data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
                     setTransactions(data); 
                 });
+
+                // FIX: Corregido query de recurrentes para usar user.uid y filtrar en memoria
                 const qRec = query(collection(db, 'artifacts', appId, 'users', user.uid, 'recurring'));
                 const unsubRec = onSnapshot(qRec, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs
+                        .map(d => ({id: d.id, ...d.data()}))
+                        .filter(t => t.profileId === currentProfile);
                     setRecurringRules(data); 
                 });
+
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); };
             }, [user, currentProfile]);
 
@@ -598,7 +734,7 @@
                 return React.createElement(LoginScreen, { onSelectProfile: (id) => setCurrentProfile(id) });
             }
             
-            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; 
+            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; // user_01 -> Usuario 01
 
             return React.createElement('div', { className: "h-screen w-full bg-gray-50 flex flex-col" },
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
@@ -614,7 +750,7 @@
 
                 React.createElement('nav', { className: "bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-30 safe-bottom" },
                     React.createElement('button', { onClick: () => setCurrentTab('home'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'home' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Home, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Inicio")),
-                    React.createElement('button', { onClick: () => setCurrentTab('history'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'history' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(History, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Movimientos")),
+                    React.createElement('button', { onClick: () => setCurrentTab('history'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'history' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(History, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Historial")),
                      React.createElement('button', { onClick: () => setCurrentTab('report'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'report' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(FileSpreadsheet, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Reporte")),
                      React.createElement('button', { onClick: () => setCurrentTab('config'), className: `flex flex-col items-center gap-1 p-2 ${currentTab === 'config' ? 'text-emerald-600' : 'text-gray-400'}` }, React.createElement(Settings, { size: 24 }), React.createElement('span', { className: "text-[10px] font-bold" }, "Configuración"))
                 ),
