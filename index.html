@@ -142,7 +142,7 @@
 
         // --- CONSTANTES ---
         const DEFAULT_PNL = {
-            ingresos: ["Sueldo", "Honorarios", "Ventas", "Cambio Divisas"],
+            ingresos: ["Sueldo", "Honorarios", "Ventas"],
             gastos_fijos: ["Alquiler", "Internet", "Condominio", "Colegio", "Suscripciones"],
             gastos_variables: ["Mercado", "Salidas", "Salud", "Transporte", "Gustos"],
             ahorro: ["Ahorro General"]
@@ -253,7 +253,7 @@
                         React.createElement(Wallet, { size: 48 })
                     ),
                     React.createElement('h1', { className: "text-4xl font-black mb-2 tracking-tight" }, "Sencillo"),
-                    React.createElement('p', { className: "text-gray-400 mb-12 text-lg font-light" }, "Tus cuentas claras en Venezuela"),
+                    React.createElement('p', { className: "text-gray-400 mb-12 text-lg font-light" }, "Tus cuentas claras"),
                     
                     React.createElement('div', { className: "grid grid-cols-2 gap-4" },
                         profiles.map(profile => 
@@ -503,7 +503,7 @@
 
         const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onEditTransaction, currentProfileLabel, onLogout }) => {
             const balance = transactions.reduce((acc, curr) => { return curr.type === 'income' ? acc + (curr.amountUSD || 0) : acc - (curr.amountUSD || 0); }, 0);
-            const recent = transactions.slice(0, 5);
+            
             return React.createElement('div', { className: "px-5 pb-32 space-y-8", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
                 React.createElement('header', { className: "flex justify-between items-center pt-2" }, React.createElement('div', null, React.createElement('h1', { className: "text-3xl font-black text-white tracking-tight" }, "Sencillo"), React.createElement('p', { className: "text-sm text-gray-400 font-medium mt-1" }, `${currentProfileLabel}`)), React.createElement('button', { onClick: onLogout, className: "w-12 h-12 bg-dark-card text-gray-400 rounded-2xl flex items-center justify-center hover:text-white border border-white/10 transition-colors" }, React.createElement(LogOut, { size: 20 }))),
                 
@@ -515,11 +515,7 @@
                     React.createElement('button', { onClick: onOpenAdd, className: "w-full bg-white/90 text-emerald-900 hover:bg-white py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg backdrop-blur-md" }, React.createElement(Plus, { size: 20 }), "Registrar Movimiento")
                 ),
                 
-                React.createElement(RatesCard, { rates, onUpdateRate }),
-                
-                React.createElement('div', null, 
-                    React.createElement('div', { className: "flex justify-between items-end mb-6" }, React.createElement('h3', { className: "font-bold text-xl text-white tracking-tight" }, "Recientes"), React.createElement('span', { className: "text-xs text-brand-light font-bold uppercase tracking-widest cursor-pointer hover:underline" }, "Ver todo")), 
-                    React.createElement('div', { className: "space-y-3" }, recent.map(t => React.createElement('div', { key: t.id, onClick: () => onEditTransaction(t), className: "glass-panel p-4 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-white/5 active:scale-[0.98] transition-all" }, React.createElement('div', { className: "flex items-center gap-4" }, React.createElement('div', { className: `w-12 h-12 rounded-2xl flex items-center justify-center border ${t.type === 'income' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}` }, t.type === 'income' ? React.createElement(ArrowDownLeft, { size: 20 }) : React.createElement(ArrowUpRight, { size: 20 })), React.createElement('div', null, React.createElement('p', { className: "font-bold text-sm text-white" }, t.category), React.createElement('p', { className: "text-xs text-gray-500 font-medium mt-0.5" }, t.segment ? SEGMENTS[t.segment]?.label : (t.type === 'income' ? 'Ingreso' : 'Gasto')))), React.createElement('div', { className: "text-right" }, React.createElement('p', { className: `font-bold text-base ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}` }, t.type === 'income' ? '+' : '-', `$${(t.amountUSD || 0).toFixed(2)}`), React.createElement('p', { className: "text-xs text-gray-500 font-mono" }, t.currency === 'USD' ? `$${t.amount}` : `Bs. ${t.amount}`))))))
+                React.createElement(RatesCard, { rates, onUpdateRate })
             );
         };
 
@@ -541,8 +537,8 @@
         
         const PnLReportView = ({ transactions, pnlStructure, recurringRules }) => {
             const [granularity, setGranularity] = useState('monthly');
-            const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-            const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]; });
+            const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return getLocalDateString(d); });
+            const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return getLocalDateString(d); });
 
             // ... (Lógica de reportes igual que antes, solo cambios visuales)
             const periods = useMemo(() => { const start = new Date(startDate); const end = new Date(endDate); const periodsArr = []; let current = new Date(start); end.setHours(23, 59, 59, 999); while (current <= end) { let label = "", id = ""; if (granularity === 'daily') { id = current.toISOString().split('T')[0]; label = current.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); current.setDate(current.getDate() + 1); } else if (granularity === 'weekly') { const lastDay = new Date(current); lastDay.setDate(lastDay.getDate() + 6); id = current.toISOString().split('T')[0]; label = `${current.getDate()}/${current.getMonth()+1}`; current.setDate(current.getDate() + 7); } else if (granularity === 'monthly') { id = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`; label = current.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }); current.setMonth(current.getMonth() + 1); } else if (granularity === 'yearly') { id = `${current.getFullYear()}`; label = `${current.getFullYear()}`; current.setFullYear(current.getFullYear() + 1); } periodsArr.push({ id, label }); } return periodsArr; }, [startDate, endDate, granularity]);
@@ -551,20 +547,20 @@
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)] bg-app-bg" },
                 React.createElement('div', { className: "px-6 pb-6 bg-app-bg border-b border-white/5", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
                     React.createElement('div', { className: "flex justify-between items-center mb-6" },
-                        React.createElement('h2', { className: "text-3xl font-black text-white" }, "Estado de Resultados"),
+                        React.createElement('h2', { className: "text-3xl font-black text-white" }, "Reporte"),
                          React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-dark-highlight border border-white/10 text-white rounded-xl px-4 py-2 text-sm font-bold focus:outline-none" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual"))
                     ),
                     React.createElement('div', { className: "flex gap-3 text-sm mb-2" }, React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-dark-highlight border border-white/10 text-white rounded-xl px-4 py-3 font-medium" }), React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-dark-highlight border border-white/10 text-white rounded-xl px-4 py-3 font-medium" }))
                 ),
-                React.createElement('div', { className: "flex-1 overflow-auto bg-app-bg pnl-table-container pb-20" },
+                React.createElement('div', { className: "flex-1 overflow-auto bg-app-bg pnl-table-container pb-36" }, // Increased padding bottom for table
                     React.createElement('table', { className: "pnl-table" },
                         React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', { className: "pnl-cell-head pnl-col-sticky" }, "Concepto"), periods.map(p => React.createElement('th', { key: p.id, className: "pnl-cell-head min-w-[80px]" }, p.label)))),
                         React.createElement('tbody', null,
                             ['ingresos', 'ahorro'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
-                            React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "🔵 DISPONIBLE"), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))),
+                            React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "DISPONIBLE"), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))),
                             ['gastos_fijos', 'gastos_variables'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
                             React.createElement('tr', null, React.createElement('td', { colSpan: periods.length + 1, className: "h-4 bg-app-bg" })),
-                            React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-net" }, "🟢 RESULTADO NETO"), periods.map(p => React.createElement('td', { key: p.id, className: `pnl-cell pnl-row-net ${reportData.net[p.id] < 0 ? 'text-red-500' : 'text-emerald-400'}` }, Math.round(reportData.net[p.id]).toLocaleString())))
+                            React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-net" }, "RESULTADO NETO"), periods.map(p => React.createElement('td', { key: p.id, className: `pnl-cell pnl-row-net ${reportData.net[p.id] < 0 ? 'text-red-500' : 'text-emerald-400'}` }, Math.round(reportData.net[p.id]).toLocaleString())))
                         )
                     )
                 )
@@ -632,11 +628,26 @@
                     React.createElement('button', { onClick: () => setShowTransactionModal(true), className: "bg-brand text-black p-5 rounded-full shadow-2xl shadow-brand/40 hover:scale-105 transition-transform border border-white/20" }, React.createElement(Plus, { size: 28 }))
                 ),
 
-                React.createElement('nav', { className: "bg-dark-surface/90 backdrop-blur-xl border-t border-white/5 pb-safe pt-4 px-6 flex justify-between items-center z-30 safe-bottom fixed bottom-0 w-full" },
-                    React.createElement('button', { onClick: () => setCurrentTab('home'), className: `flex flex-col items-center gap-1.5 p-2 transition-colors ${currentTab === 'home' ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(Home, { size: 24, strokeWidth: currentTab === 'home' ? 2.5 : 2 }), React.createElement('span', { className: "text-[10px] font-bold tracking-wider" }, "Inicio")),
-                    React.createElement('button', { onClick: () => setCurrentTab('history'), className: `flex flex-col items-center gap-1.5 p-2 transition-colors ${currentTab === 'history' ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(History, { size: 24, strokeWidth: currentTab === 'history' ? 2.5 : 2 }), React.createElement('span', { className: "text-[10px] font-bold tracking-wider" }, "Movimientos")),
-                     React.createElement('button', { onClick: () => setCurrentTab('report'), className: `flex flex-col items-center gap-1.5 p-2 transition-colors ${currentTab === 'report' ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(FileSpreadsheet, { size: 24, strokeWidth: currentTab === 'report' ? 2.5 : 2 }), React.createElement('span', { className: "text-[10px] font-bold tracking-wider" }, "Reporte")),
-                     React.createElement('button', { onClick: () => setCurrentTab('config'), className: `flex flex-col items-center gap-1.5 p-2 transition-colors ${currentTab === 'config' ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(Settings, { size: 24, strokeWidth: currentTab === 'config' ? 2.5 : 2 }), React.createElement('span', { className: "text-[10px] font-bold tracking-wider" }, "Ajustes"))
+                React.createElement('nav', { className: "bg-dark-surface/90 backdrop-blur-xl border-t border-white/5 pb-safe pt-4 px-2 flex justify-around items-center z-30 safe-bottom fixed bottom-0 w-full" },
+                    React.createElement('button', { 
+                        onClick: () => setCurrentTab('home'), 
+                        className: `p-4 rounded-2xl transition-all ${currentTab === 'home' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
+                    }, React.createElement(Home, { size: 28, strokeWidth: currentTab === 'home' ? 2.5 : 2 })),
+                    
+                    React.createElement('button', { 
+                        onClick: () => setCurrentTab('history'), 
+                        className: `p-4 rounded-2xl transition-all ${currentTab === 'history' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
+                    }, React.createElement(History, { size: 28, strokeWidth: currentTab === 'history' ? 2.5 : 2 })),
+                    
+                     React.createElement('button', { 
+                        onClick: () => setCurrentTab('report'), 
+                        className: `p-4 rounded-2xl transition-all ${currentTab === 'report' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
+                    }, React.createElement(FileSpreadsheet, { size: 28, strokeWidth: currentTab === 'report' ? 2.5 : 2 })),
+                    
+                     React.createElement('button', { 
+                        onClick: () => setCurrentTab('config'), 
+                        className: `p-4 rounded-2xl transition-all ${currentTab === 'config' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
+                    }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                 ),
 
                 showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: currentProfile, initialData: editingTransaction })
