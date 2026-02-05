@@ -107,7 +107,15 @@
 
         // --- FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // Importamos GoogleAuthProvider y signInWithPopup
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider,
+            onAuthStateChanged, 
+            signOut,
+            signInWithCustomToken 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, limit, addDoc, deleteDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // CONFIGURACIÓN DINÁMICA
@@ -115,11 +123,10 @@
         let appId;
 
         if (typeof __firebase_config !== 'undefined') {
-            // Modo Desarrollo (Gemini)
             firebaseConfig = JSON.parse(__firebase_config);
             appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         } else {
-            // Entorno Producción (Tus datos reales de 'sencillo-app')
+            // Entorno Producción - TUS DATOS REALES
             firebaseConfig = {
                 apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
                 authDomain: "sencillo-app-40a36.firebaseapp.com",
@@ -128,10 +135,10 @@
                 messagingSenderId: "27193285455",
                 appId: "1:27193285455:web:6cb0f8ac14f0e36fb0433a"
             };
-            appId = 'sencillo-production'; 
+            appId = 'finanzas-ve-app';
         }
 
-        // Inicializar Firebase con manejo de errores
+        // Inicializar Firebase
         let app, auth, db;
         try {
             app = initializeApp(firebaseConfig);
@@ -216,9 +223,11 @@
 
         // --- PANTALLAS ---
 
-        const LoginScreen = ({ onSelectProfile }) => {
-            const [loadingProfile, setLoadingProfile] = useState(null);
+        const LoginScreen = ({ onLogin }) => {
+            const [loading, setLoading] = useState(false);
+            const [errorMsg, setErrorMsg] = useState(null);
             
+            // Auto-login para entorno de desarrollo (Canvas)
             useEffect(() => {
                 const autoAuth = async () => {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -229,26 +238,25 @@
                 if(auth) autoAuth();
             }, []);
 
-            const handleProfileSelect = async (profileId) => {
-                setLoadingProfile(profileId);
+            const handleGoogleLogin = async () => {
+                setLoading(true);
+                setErrorMsg(null);
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
-                    if (!auth.currentUser) await signInAnonymously(auth);
-                    onSelectProfile(profileId);
+                    const provider = new GoogleAuthProvider();
+                    await signInWithPopup(auth, provider);
+                    // El listener onAuthStateChanged en App se encargará del resto
                 } catch (error) {
-                    setLoadingProfile(null);
-                    alert("Error: " + error.message);
+                    console.error("Login error:", error);
+                    setLoading(false);
+                    setErrorMsg("Error: " + error.message);
                 }
             };
 
-            const profiles = [
-                { id: 'user_01', label: 'Usuario 1' },
-                { id: 'user_02', label: 'Usuario 2' },
-                { id: 'user_03', label: 'Usuario 3' },
-                { id: 'user_04', label: 'Usuario 4' }
-            ];
-
-            return React.createElement('div', { className: "h-full flex flex-col items-center justify-center p-6 bg-app-bg text-white" },
+            return React.createElement('div', { 
+                className: "h-full flex flex-col items-center justify-center p-6 bg-app-bg text-white",
+                style: { paddingTop: "calc(env(safe-area-inset-top) + 40px)", paddingBottom: "40px" } 
+            },
                 React.createElement('div', { className: "w-full max-w-sm text-center" },
                     React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-emerald-500/20 text-white" },
                         React.createElement(Wallet, { size: 48 })
@@ -256,17 +264,20 @@
                     React.createElement('h1', { className: "text-4xl font-black mb-2 tracking-tight" }, "Sencillo"),
                     React.createElement('p', { className: "text-gray-400 mb-12 text-lg font-light" }, "Tus cuentas claras"),
                     
-                    React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                        profiles.map(profile => 
-                            React.createElement('button', {
-                                key: profile.id,
-                                onClick: () => handleProfileSelect(profile.id),
-                                disabled: loadingProfile !== null,
-                                className: `p-6 rounded-3xl border transition-all flex flex-col items-center gap-3 ${loadingProfile === profile.id ? 'border-brand text-brand bg-brand/10' : 'border-white/10 bg-dark-surface hover:bg-white/5 text-gray-300 hover:text-white'}`
-                            },
-                                React.createElement(User, { size: 28, className: loadingProfile === profile.id ? "animate-pulse" : "" }),
-                                React.createElement('span', { className: "text-sm font-bold" }, loadingProfile === profile.id ? "..." : profile.label)
-                            )
+                    errorMsg && React.createElement('div', { className: "mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm text-left" }, errorMsg),
+
+                    React.createElement(Button, { 
+                        onClick: handleGoogleLogin, 
+                        disabled: loading,
+                        className: "bg-white text-black hover:bg-gray-200 shadow-xl"
+                    }, 
+                        loading ? React.createElement(Loader2, { className: "animate-spin" }) : 
+                        React.createElement('div', { className: "flex items-center gap-3" },
+                            // SVG simple de Google
+                            React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: "20", height: "20", fill: "currentColor" },
+                                React.createElement('path', { d: "M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" })
+                            ),
+                            "Continuar con Google"
                         )
                     )
                 )
@@ -353,7 +364,6 @@
                 setLocalBudgets(budgets || {});
             }, [budgets]);
 
-            // Calculate current spending per category for current month
             const currentSpending = useMemo(() => {
                 const now = new Date();
                 const currentMonth = now.getMonth();
@@ -394,7 +404,6 @@
                     React.createElement('p', { className: "text-gray-400 font-medium mt-1" }, "Control de Gastos Variables")
                 ),
                 
-                // Summary Card
                 React.createElement('div', { className: "px-6 pb-2 mt-4" },
                      React.createElement('div', { className: "bg-dark-surface p-6 rounded-[2rem] border border-white/10 relative overflow-hidden" },
                         React.createElement('div', { className: "absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl" }),
@@ -454,7 +463,7 @@
             );
         };
 
-        const TransactionModal = ({ onClose, rates, userId, pnlStructure, profileId, initialData }) => {
+        const TransactionModal = ({ onClose, rates, userId, pnlStructure, initialData }) => {
             const isEditing = !!initialData;
             
             const [segment, setSegment] = useState(initialData?.segment || 'gastos_variables'); 
@@ -493,7 +502,7 @@
                 const type = SEGMENTS[segment].type;
                 const finalDate = new Date(date + "T12:00:00").toISOString();
                 
-                const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate, profileId };
+                const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate };
 
                 if (isEditing) {
                     await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
@@ -621,7 +630,7 @@
             );
         };
 
-        const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onEditTransaction, currentProfileLabel, onLogout }) => {
+        const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onEditTransaction, user, onLogout }) => {
             const [showRatesModal, setShowRatesModal] = useState(false);
             
             // Dashboard Summary Data - Current Month Only
@@ -660,8 +669,12 @@
                             React.createElement(ChevronDown, { size: 14, className: "text-gray-400" })
                         )
                     ),
-                    React.createElement('div', { className: "flex items-center gap-2" },
-                        React.createElement('span', { className: "text-xs text-gray-500 font-bold uppercase tracking-wide hidden sm:block" }, currentProfileLabel),
+                    // User Profile & Logout
+                    React.createElement('div', { className: "flex items-center gap-3" },
+                         user && user.photoURL ? 
+                            React.createElement('img', { src: user.photoURL, alt: "User", className: "w-8 h-8 rounded-full border border-gray-700" }) :
+                            React.createElement('div', { className: "w-8 h-8 bg-brand/20 rounded-full flex items-center justify-center text-brand font-bold text-xs" }, user?.displayName?.charAt(0) || "U"),
+                         
                         React.createElement('button', { onClick: onLogout, className: "w-10 h-10 bg-dark-card text-gray-400 rounded-full flex items-center justify-center hover:text-white border border-white/10 transition-colors" }, React.createElement(LogOut, { size: 18 }))
                     )
                 ),
@@ -747,7 +760,7 @@
                         React.createElement('span', { className: "text-xs text-gray-500 flex items-center gap-1.5 mt-1 font-medium" }, React.createElement(Calendar, {size: 12}), new Date(t.date).toLocaleDateString()),
                     ), 
                     React.createElement('div', { className: "text-right" }, 
-                        React.createElement('span', { className: `block font-bold text-lg ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}` }, `${t.type === 'income' ? '+' : '-'}${(t.amountUSD || 0).toFixed(2)}`), 
+                        React.createElement('span', { className: `block font-bold text-lg ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), 
                         React.createElement('span', { className: "text-xs text-gray-500 font-mono" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`)
                     )
                 )))
@@ -755,20 +768,18 @@
         };
         
         const PnLReportView = ({ transactions, pnlStructure, recurringRules }) => {
+            // ... (Se mantiene igual, solo cambio visual menor)
             const [granularity, setGranularity] = useState('monthly');
             const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return getLocalDateString(d); });
             const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return getLocalDateString(d); });
-
-            // ... (Lógica de reportes igual que antes, solo cambios visuales)
+            // ... (Lógica de reportes igual que antes)
             const periods = useMemo(() => { const start = new Date(startDate); const end = new Date(endDate); const periodsArr = []; let current = new Date(start); end.setHours(23, 59, 59, 999); while (current <= end) { let label = "", id = ""; if (granularity === 'daily') { id = current.toISOString().split('T')[0]; label = current.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); current.setDate(current.getDate() + 1); } else if (granularity === 'weekly') { const lastDay = new Date(current); lastDay.setDate(lastDay.getDate() + 6); id = current.toISOString().split('T')[0]; label = `${current.getDate()}/${current.getMonth()+1}`; current.setDate(current.getDate() + 7); } else if (granularity === 'monthly') { id = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`; label = current.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }); current.setMonth(current.getMonth() + 1); } else if (granularity === 'yearly') { id = `${current.getFullYear()}`; label = `${current.getFullYear()}`; current.setFullYear(current.getFullYear() + 1); } periodsArr.push({ id, label }); } return periodsArr; }, [startDate, endDate, granularity]);
             const reportData = useMemo(() => { const data = { net: {}, available: {} }; const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro']; segments.forEach(seg => { data[seg] = { concepts: {}, total: {} }; (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); }); periods.forEach(p => data[seg].total[p.id] = 0); }); periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; }); const addToData = (item, periodId) => { if (periodId && data[item.segment]) { const amount = item.amountUSD || 0; if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); } if (data[item.segment].concepts[item.category][periodId] !== undefined) data[item.segment].concepts[item.category][periodId] += amount; data[item.segment].total[periodId] += amount; if (SEGMENTS[item.segment].type === 'income') data.net[periodId] += amount; else data.net[periodId] -= amount; } }; transactions.forEach(t => { const tDate = new Date(t.date); if (tDate < new Date(startDate) || tDate > new Date(endDate + "T23:59:59")) return; let pId = ""; if (granularity === 'daily') pId = t.date.split('T')[0]; else if (granularity === 'monthly') pId = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`; else if (granularity === 'yearly') pId = `${tDate.getFullYear()}`; else if (granularity === 'weekly') { const tTime = tDate.getTime(); const period = periods.find((p, i) => { const pStart = new Date(p.id).getTime(); const nextP = periods[i+1]; const pEnd = nextP ? new Date(nextP.id).getTime() : Infinity; return tTime >= pStart && tTime < pEnd; }); if(period) pId = period.id; } addToData(t, pId); }); recurringRules.forEach(rule => { const ruleStart = new Date(rule.startDate); const reportEnd = new Date(endDate); let current = new Date(ruleStart); const today = new Date(); while (current <= reportEnd) { const currentStr = current.toISOString().split('T')[0]; if (currentStr >= startDate) { let pId = ""; if (granularity === 'daily') pId = currentStr; else if (granularity === 'monthly') pId = currentStr.substring(0, 7); else if (granularity === 'yearly') pId = currentStr.substring(0, 4); if (current > today) { addToData(rule, pId); } } if (rule.frequency === 'daily') current.setDate(current.getDate() + 1); else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7); else if (rule.frequency === 'monthly') current.setMonth(current.getMonth() + 1); else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1); else break; } }); periods.forEach(p => { const totalIncome = data.ingresos.total[p.id] || 0; const totalSavings = data.ahorro.total[p.id] || 0; data.available[p.id] = totalIncome - totalSavings; }); return data; }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)] bg-app-bg" },
                 React.createElement('div', { className: "px-6 pb-6 bg-app-bg border-b border-white/5", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
                     React.createElement('div', { className: "flex justify-between items-center mb-6" },
-                        // Eliminado el H2 "Reporte"
                          React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-dark-highlight border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:outline-none min-w-[80px]" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual")),
-                         // Fila unificada para fechas, mucho más compacta
                          React.createElement('div', { className: "flex gap-2 items-center flex-1 justify-end" }, 
                              React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-24 bg-dark-highlight border border-white/10 text-white rounded-xl px-2 py-2 text-xs font-medium" }), 
                              React.createElement('span', { className: "text-gray-500 text-xs" }, "a"),
@@ -793,7 +804,6 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [currentProfile, setCurrentProfile] = useState(null); 
             const [rates, setRates] = useState({ bcv: 0, parallel: 0 }); // Init to 0
             const [transactions, setTransactions] = useState([]);
             const [recurringRules, setRecurringRules] = useState([]);
@@ -809,36 +819,35 @@
             }, []);
 
             useEffect(() => {
-                if (!user || !currentProfile) return;
-                const userPath = currentProfile;
-                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
+                if (!user) return;
+                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates');
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); });
                 getRatesFromAPI().then(async (newRates) => { if (newRates && newRates.bcv && newRates.parallel) { await setDoc(ratesRef, newRates, { merge: true }); } });
                 
-                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
+                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl');
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
                 
                 // Budgets listener
-                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`);
+                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets');
                 const unsubBudgets = onSnapshot(budgetsRef, (doc) => { if (doc.exists()) setBudgets(doc.data()); });
 
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                     data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
                     setTransactions(data); 
                 });
                 const qRec = query(collection(db, 'artifacts', appId, 'users', user.uid, 'recurring'));
                 const unsubRec = onSnapshot(qRec, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                     setRecurringRules(data); 
                 });
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); unsubBudgets(); };
-            }, [user, currentProfile]);
+            }, [user]);
 
-            const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
-            const updateBudgets = async (newBudgets) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`), newBudgets); };
+            const updateRates = async (newRates) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
+            const updatePnl = async (newPnl) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl'), newPnl); };
+            const updateBudgets = async (newBudgets) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets'), newBudgets); };
 
             const handleEditTransaction = (tx) => {
                 setEditingTransaction(tx);
@@ -850,15 +859,21 @@
                 setEditingTransaction(null);
             };
 
-            if (!user || !currentProfile) {
-                return React.createElement(LoginScreen, { onSelectProfile: (id) => setCurrentProfile(id) });
+            const handleLogout = async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                }
+            };
+
+            if (!user) {
+                return React.createElement(LoginScreen, { onLogin: () => {} });
             }
-            
-            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; 
 
             return React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col text-white" },
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
-                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
+                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), user, onLogout: handleLogout }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction }) :
                     currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure, recurringRules }) : 
                     currentTab === 'budget' ? React.createElement(BudgetView, { pnlStructure, budgets, onUpdateBudgets: updateBudgets, transactions }) :
@@ -896,7 +911,7 @@
                     }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                 ),
 
-                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: currentProfile, initialData: editingTransaction })
+                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: null, initialData: editingTransaction })
             );
         };
 
