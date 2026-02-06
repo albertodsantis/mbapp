@@ -105,7 +105,6 @@
 
         // --- FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // Importamos signInWithRedirect para mejor soporte móvil
         import { 
             getAuth, 
             signInWithRedirect, 
@@ -127,7 +126,7 @@
             firebaseConfig = JSON.parse(__firebase_config);
             appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         } else {
-            // Entorno Producción (Tus datos reales)
+            // Entorno Producción - TUS DATOS REALES
             firebaseConfig = {
                 apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
                 authDomain: "sencillo-app-40a36.firebaseapp.com",
@@ -145,8 +144,10 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
+            console.log("Firebase inicializado correctamente");
         } catch (error) {
             console.error("Error inicializando Firebase:", error);
+            alert("Error crítico: No se pudo conectar con la base de datos.");
         }
 
         // --- CONSTANTES ---
@@ -235,7 +236,6 @@
                         catch (e) { console.error(e); }
                     }
                     
-                    // Chequear si regresamos de un redirect
                     try {
                         await getRedirectResult(auth);
                     } catch (error) {
@@ -252,7 +252,6 @@
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
                     const provider = new GoogleAuthProvider();
-                    // Usamos REDIRECT en lugar de POPUP para evitar bloqueos en iOS
                     await signInWithRedirect(auth, provider);
                 } catch (error) {
                     console.error("Login error:", error);
@@ -260,27 +259,6 @@
                     setErrorMsg("Error: " + error.message);
                 }
             };
-            
-            // Perfiles locales para prueba si no se quiere usar Google
-             const handleProfileSelect = async (profileId) => {
-                setLoading(true);
-                try {
-                    if (!auth) throw new Error("Firebase no inicializado.");
-                    if (!auth.currentUser) await signInAnonymously(auth);
-                    // Aquí la lógica de perfil se maneja en el padre, solo simulamos login exitoso
-                    // Nota: En un flujo real de solo Google, esto no existiría, pero lo dejo por si acaso
-                } catch (error) {
-                    setLoading(false);
-                    setErrorMsg("Error anónimo: " + error.message);
-                }
-            };
-
-            const profiles = [
-                { id: 'user_01', label: 'Usuario 1' },
-                { id: 'user_02', label: 'Usuario 2' },
-                { id: 'user_03', label: 'Usuario 3' },
-                { id: 'user_04', label: 'Usuario 4' }
-            ];
 
             return React.createElement('div', { 
                 className: "h-full flex flex-col items-center justify-center p-6 bg-app-bg text-white",
@@ -302,7 +280,6 @@
                     }, 
                         loading ? React.createElement(Loader2, { className: "animate-spin" }) : 
                         React.createElement('div', { className: "flex items-center gap-3" },
-                            // SVG simple de Google
                             React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: "20", height: "20", fill: "currentColor" },
                                 React.createElement('path', { d: "M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" })
                             ),
@@ -313,9 +290,6 @@
             );
         };
 
-        // ... (Resto de componentes ConfigView, BudgetView, TransactionModal, RatesCard, HomeView, HistoryView, PnLReportView se mantienen igual)
-        // Por brevedad, incluyo los componentes tal cual estaban en la última versión funcional
-        
         const ConfigView = ({ pnlData, onUpdatePnl }) => {
             const [localPnl, setLocalPnl] = useState(pnlData);
             const [newConcept, setNewConcept] = useState("");
@@ -396,6 +370,7 @@
                 setLocalBudgets(budgets || {});
             }, [budgets]);
 
+            // Calculate current spending per category for current month
             const currentSpending = useMemo(() => {
                 const now = new Date();
                 const currentMonth = now.getMonth();
@@ -436,6 +411,7 @@
                     React.createElement('p', { className: "text-gray-400 font-medium mt-1" }, "Control de Gastos Variables")
                 ),
                 
+                // Summary Card
                 React.createElement('div', { className: "px-6 pb-2 mt-4" },
                      React.createElement('div', { className: "bg-dark-surface p-6 rounded-[2rem] border border-white/10 relative overflow-hidden" },
                         React.createElement('div', { className: "absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl" }),
@@ -523,6 +499,7 @@
                 if (rateType === 'bcv') rate = rates.bcv;
                 else if (rateType === 'parallel') rate = rates.parallel;
                 else rate = customRate;
+
                 if (!rate || rate === 0) return 0;
                 return parseFloat(amount) / rate;
             }, [amount, currency, rateType, customRate, rates]);
@@ -534,23 +511,36 @@
                 const type = SEGMENTS[segment].type;
                 const finalDate = new Date(date + "T12:00:00").toISOString();
                 
-                const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate, profileId };
+                const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate, profileId: 'personal' };
 
-                if (isEditing) {
-                    await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
-                } else {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), transactionData);
-                    if (recurrence !== 'none') {
-                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'recurring'), { ...transactionData, frequency: recurrence, startDate: finalDate });
+                try {
+                    if (isEditing) {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
+                    } else {
+                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), transactionData);
+                        if (recurrence !== 'none') {
+                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'recurring'), { ...transactionData, frequency: recurrence, startDate: finalDate });
+                        }
+                    }
+                    onClose();
+                } catch (error) {
+                    console.error("Error saving transaction:", error);
+                    if (error.code === 'permission-denied') {
+                        alert("Error: Permisos insuficientes. Asegúrate de que tu base de datos Firebase está en 'Modo de Prueba'.");
+                    } else {
+                        alert("Error al guardar: " + error.message);
                     }
                 }
-                onClose();
             };
 
             const handleDelete = async () => {
                 if (confirm("¿Estás seguro de eliminar este movimiento?")) {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', initialData.id));
-                    onClose();
+                    try {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', initialData.id));
+                        onClose();
+                    } catch (error) {
+                        alert("Error al eliminar: " + error.message);
+                    }
                 }
             };
             
@@ -809,7 +799,7 @@
             const reportData = useMemo(() => { const data = { net: {}, available: {} }; const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro']; segments.forEach(seg => { data[seg] = { concepts: {}, total: {} }; (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); }); periods.forEach(p => data[seg].total[p.id] = 0); }); periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; }); const addToData = (item, periodId) => { if (periodId && data[item.segment]) { const amount = item.amountUSD || 0; if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); } if (data[item.segment].concepts[item.category][periodId] !== undefined) data[item.segment].concepts[item.category][periodId] += amount; data[item.segment].total[periodId] += amount; if (SEGMENTS[item.segment].type === 'income') data.net[periodId] += amount; else data.net[periodId] -= amount; } }; transactions.forEach(t => { const tDate = new Date(t.date); if (tDate < new Date(startDate) || tDate > new Date(endDate + "T23:59:59")) return; let pId = ""; if (granularity === 'daily') pId = t.date.split('T')[0]; else if (granularity === 'monthly') pId = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`; else if (granularity === 'yearly') pId = `${tDate.getFullYear()}`; else if (granularity === 'weekly') { const tTime = tDate.getTime(); const period = periods.find((p, i) => { const pStart = new Date(p.id).getTime(); const nextP = periods[i+1]; const pEnd = nextP ? new Date(nextP.id).getTime() : Infinity; return tTime >= pStart && tTime < pEnd; }); if(period) pId = period.id; } addToData(t, pId); }); recurringRules.forEach(rule => { const ruleStart = new Date(rule.startDate); const reportEnd = new Date(endDate); let current = new Date(ruleStart); const today = new Date(); while (current <= reportEnd) { const currentStr = current.toISOString().split('T')[0]; if (currentStr >= startDate) { let pId = ""; if (granularity === 'daily') pId = currentStr; else if (granularity === 'monthly') pId = currentStr.substring(0, 7); else if (granularity === 'yearly') pId = currentStr.substring(0, 4); if (current > today) { addToData(rule, pId); } } if (rule.frequency === 'daily') current.setDate(current.getDate() + 1); else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7); else if (rule.frequency === 'monthly') current.setMonth(current.getMonth() + 1); else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1); else break; } }); periods.forEach(p => { const totalIncome = data.ingresos.total[p.id] || 0; const totalSavings = data.ahorro.total[p.id] || 0; data.available[p.id] = totalIncome - totalSavings; }); return data; }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)] bg-app-bg" },
-                React.createElement('div', { className: "px-6 pb-6 bg-app-bg border-b border-white/5", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
+                React.createElement('div', { className: "px-4 pb-4 bg-app-bg border-b border-white/5", style: { paddingTop: "calc(env(safe-area-inset-top) + 20px)" } },
                     React.createElement('div', { className: "flex justify-between items-center mb-6" },
                         // Eliminado el H2 "Reporte"
                          React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "bg-dark-highlight border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:outline-none min-w-[80px]" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual")),
@@ -854,35 +844,36 @@
             }, []);
 
             useEffect(() => {
-                if (!user) return;
-                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates');
+                if (!user || !currentProfile) return;
+                const userPath = currentProfile;
+                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); });
                 getRatesFromAPI().then(async (newRates) => { if (newRates && newRates.bcv && newRates.parallel) { await setDoc(ratesRef, newRates, { merge: true }); } });
                 
-                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl');
+                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
                 
                 // Budgets listener
-                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets');
+                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`);
                 const unsubBudgets = onSnapshot(budgetsRef, (doc) => { if (doc.exists()) setBudgets(doc.data()); });
 
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
                     data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
                     setTransactions(data); 
                 });
                 const qRec = query(collection(db, 'artifacts', appId, 'users', user.uid, 'recurring'));
                 const unsubRec = onSnapshot(qRec, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
                     setRecurringRules(data); 
                 });
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); unsubBudgets(); };
-            }, [user]);
+            }, [user, currentProfile]);
 
-            const updateRates = async (newRates) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updatePnl = async (newPnl) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl'), newPnl); };
-            const updateBudgets = async (newBudgets) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets'), newBudgets); };
+            const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
+            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
+            const updateBudgets = async (newBudgets) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`), newBudgets); };
 
             const handleEditTransaction = (tx) => {
                 setEditingTransaction(tx);
@@ -894,21 +885,15 @@
                 setEditingTransaction(null);
             };
 
-            const handleLogout = async () => {
-                try {
-                    await signOut(auth);
-                } catch (error) {
-                    console.error("Error signing out:", error);
-                }
-            };
-
-            if (!user) {
-                return React.createElement(LoginScreen, { onLogin: () => {} });
+            if (!user || !currentProfile) {
+                return React.createElement(LoginScreen, { onSelectProfile: (id) => setCurrentProfile(id) });
             }
+            
+            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; 
 
             return React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col text-white" },
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
-                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), user, onLogout: handleLogout }) :
+                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction }) :
                     currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure, recurringRules }) : 
                     currentTab === 'budget' ? React.createElement(BudgetView, { pnlStructure, budgets, onUpdateBudgets: updateBudgets, transactions }) :
@@ -946,7 +931,8 @@
                     }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                 ),
 
-                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: null, initialData: editingTransaction })
+                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: currentProfile, initialData: editingTransaction }),
+                showConfigModal && React.createElement(ConfigView, { onClose: () => setShowConfigModal(false), pnlData: pnlStructure, onUpdatePnl: updatePnl })
             );
         };
 
