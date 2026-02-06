@@ -100,20 +100,18 @@
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
             LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
-            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank
+            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock
         } from 'lucide-react';
 
         // --- FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // Cambiamos a signInWithRedirect para mejor soporte móvil
+        // Importamos autenticación por email
         import { 
             getAuth, 
-            signInWithRedirect, 
-            getRedirectResult,
-            signInAnonymously, 
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
             onAuthStateChanged, 
             signInWithCustomToken, 
-            GoogleAuthProvider, 
             signOut 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, limit, addDoc, deleteDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -224,54 +222,54 @@
 
         // --- PANTALLAS ---
 
-        const LoginScreen = ({ onLogin }) => {
-            const [loading, setLoading] = useState(true); // Empezar cargando para chequear redirect
+        const LoginScreen = () => {
+            const [isSignUp, setIsSignUp] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
             const [errorMsg, setErrorMsg] = useState(null);
             
             useEffect(() => {
-                const checkAuth = async () => {
-                    // 1. Chequear token inicial (entorno dev)
+                const autoAuth = async () => {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try { await signInWithCustomToken(auth, __initial_auth_token); return; } 
+                        try { await signInWithCustomToken(auth, __initial_auth_token); } 
                         catch (e) { console.error(e); }
                     }
-
-                    // 2. Chequear resultado de redirección de Google
-                    try {
-                        const result = await getRedirectResult(auth);
-                        if (result) {
-                            // Usuario logueado exitosamente, onAuthStateChanged manejará el resto
-                            console.log("Login por redirección exitoso");
-                        }
-                    } catch (error) {
-                        console.error("Error en redirección:", error);
-                        setLoading(false);
-                        if (error.code === 'auth/unauthorized-domain') {
-                            setErrorMsg("⚠️ Dominio no autorizado en Firebase Console.");
-                        } else {
-                            setErrorMsg(error.message);
-                        }
-                    } finally {
-                        setLoading(false); // Dejar de cargar si no hubo redirect o si falló
-                    }
                 };
-                
-                if (auth) checkAuth();
-                else setLoading(false);
+                if(auth) autoAuth();
             }, []);
 
-            const handleGoogleLogin = async () => {
+            const handleSubmit = async (e) => {
+                e.preventDefault();
                 setLoading(true);
                 setErrorMsg(null);
+
+                if (!email || !password) {
+                    setErrorMsg("Por favor completa todos los campos");
+                    setLoading(false);
+                    return;
+                }
+
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
-                    const provider = new GoogleAuthProvider();
-                    // Usamos REDIRECT para evitar problemas de popup en móviles
-                    await signInWithRedirect(auth, provider);
+                    
+                    if (isSignUp) {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    }
+                    // Auth state listener handles redirect
                 } catch (error) {
-                    console.error("Login error:", error);
+                    console.error("Auth error:", error);
                     setLoading(false);
-                    setErrorMsg("Error: " + error.message);
+                    
+                    if (error.code === 'auth/invalid-email') setErrorMsg("El email no es válido.");
+                    else if (error.code === 'auth/user-disabled') setErrorMsg("Usuario deshabilitado.");
+                    else if (error.code === 'auth/user-not-found') setErrorMsg("Usuario no encontrado.");
+                    else if (error.code === 'auth/wrong-password') setErrorMsg("Contraseña incorrecta.");
+                    else if (error.code === 'auth/email-already-in-use') setErrorMsg("El email ya está registrado.");
+                    else if (error.code === 'auth/weak-password') setErrorMsg("La contraseña es muy débil (mínimo 6 caracteres).");
+                    else setErrorMsg("Error: " + error.message);
                 }
             };
 
@@ -279,27 +277,55 @@
                 className: "h-full flex flex-col items-center justify-center p-6 bg-app-bg text-white",
                 style: { paddingTop: "calc(env(safe-area-inset-top) + 40px)", paddingBottom: "40px" } 
             },
-                React.createElement('div', { className: "w-full max-w-sm text-center" },
-                    React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-emerald-500/20 text-white" },
-                        React.createElement(Wallet, { size: 48 })
+                React.createElement('div', { className: "w-full max-w-sm" },
+                    React.createElement('div', { className: "text-center mb-8" },
+                        React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/20 text-white" },
+                            React.createElement(Wallet, { size: 48 })
+                        ),
+                        React.createElement('h1', { className: "text-4xl font-black mb-2 tracking-tight" }, "Sencillo"),
+                        React.createElement('p', { className: "text-gray-400 text-lg font-light" }, "Tus cuentas claras")
                     ),
-                    React.createElement('h1', { className: "text-4xl font-black mb-2 tracking-tight" }, "Sencillo"),
-                    React.createElement('p', { className: "text-gray-400 mb-12 text-lg font-light" }, "Tus cuentas claras"),
                     
-                    errorMsg && React.createElement('div', { className: "mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm text-left" }, errorMsg),
+                    errorMsg && React.createElement('div', { className: "mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm" }, errorMsg),
 
-                    React.createElement(Button, { 
-                        onClick: handleGoogleLogin, 
-                        disabled: loading,
-                        className: "bg-white text-black hover:bg-gray-200 shadow-xl"
-                    }, 
-                        loading ? React.createElement(Loader2, { className: "animate-spin" }) : 
-                        React.createElement('div', { className: "flex items-center gap-3" },
-                            React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: "20", height: "20", fill: "currentColor" },
-                                React.createElement('path', { d: "M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" })
-                            ),
-                            "Continuar con Google"
+                    React.createElement('form', { onSubmit: handleSubmit, className: "space-y-4" },
+                        React.createElement('div', { className: "space-y-1" },
+                             React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1 uppercase" }, "Email"),
+                             React.createElement('div', { className: "relative" },
+                                React.createElement('span', { className: "absolute left-4 top-3.5 text-gray-500" }, React.createElement(Mail, { size: 18 })),
+                                React.createElement('input', { 
+                                    type: "email", 
+                                    value: email, 
+                                    onChange: (e) => setEmail(e.target.value),
+                                    className: "w-full pl-11 pr-4 py-3 bg-dark-surface border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand placeholder-gray-700",
+                                    placeholder: "hola@ejemplo.com"
+                                })
+                             )
+                        ),
+                        React.createElement('div', { className: "space-y-1" },
+                             React.createElement('label', { className: "text-xs font-bold text-gray-500 ml-1 uppercase" }, "Contraseña"),
+                             React.createElement('div', { className: "relative" },
+                                React.createElement('span', { className: "absolute left-4 top-3.5 text-gray-500" }, React.createElement(Lock, { size: 18 })),
+                                React.createElement('input', { 
+                                    type: "password", 
+                                    value: password, 
+                                    onChange: (e) => setPassword(e.target.value),
+                                    className: "w-full pl-11 pr-4 py-3 bg-dark-surface border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand placeholder-gray-700",
+                                    placeholder: "••••••••"
+                                })
+                             )
+                        ),
+                        
+                        React.createElement(Button, { type: "submit", disabled: loading, className: "mt-6" }, 
+                            loading ? React.createElement(Loader2, { className: "animate-spin" }) : (isSignUp ? "Registrarse" : "Entrar")
                         )
+                    ),
+                    
+                    React.createElement('div', { className: "mt-8 text-center" },
+                        React.createElement('button', { 
+                            onClick: () => { setIsSignUp(!isSignUp); setErrorMsg(null); },
+                            className: "text-sm text-gray-400 hover:text-brand transition-colors"
+                        }, isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate")
                     )
                 )
             );
@@ -710,7 +736,7 @@
                     React.createElement('div', { className: "flex items-center gap-3" },
                          user && user.photoURL ? 
                             React.createElement('img', { src: user.photoURL, alt: "User", className: "w-8 h-8 rounded-full border border-gray-700" }) :
-                            React.createElement('div', { className: "w-8 h-8 bg-brand/20 rounded-full flex items-center justify-center text-brand font-bold text-xs" }, user?.displayName?.charAt(0) || "U"),
+                            React.createElement('div', { className: "w-8 h-8 bg-brand/20 rounded-full flex items-center justify-center text-brand font-bold text-xs" }, (user?.email || "U").charAt(0).toUpperCase()),
                          
                         React.createElement('button', { onClick: onLogout, className: "w-10 h-10 bg-dark-card text-gray-400 rounded-full flex items-center justify-center hover:text-white border border-white/10 transition-colors" }, React.createElement(LogOut, { size: 18 }))
                     )
@@ -797,7 +823,7 @@
                         React.createElement('span', { className: "text-xs text-gray-500 flex items-center gap-1.5 mt-1 font-medium" }, React.createElement(Calendar, {size: 12}), new Date(t.date).toLocaleDateString()),
                     ), 
                     React.createElement('div', { className: "text-right" }, 
-                        React.createElement('span', { className: `block font-bold text-lg ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}` }, `$${(t.amountUSD || 0).toFixed(2)}`), 
+                        React.createElement('span', { className: `block font-bold text-lg ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}` }, `${t.type === 'income' ? '+' : '-'}${(t.amountUSD || 0).toFixed(2)}`), 
                         React.createElement('span', { className: "text-xs text-gray-500 font-mono" }, t.currency === 'USD' ? 'USD' : `Bs ${t.amount}`)
                     )
                 )))
@@ -859,36 +885,35 @@
             }, []);
 
             useEffect(() => {
-                if (!user || !currentProfile) return;
-                const userPath = currentProfile;
-                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`);
+                if (!user) return;
+                const ratesRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates');
                 const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); });
                 getRatesFromAPI().then(async (newRates) => { if (newRates && newRates.bcv && newRates.parallel) { await setDoc(ratesRef, newRates, { merge: true }); } });
                 
-                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`);
+                const pnlRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl');
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { if (doc.exists()) setPnlStructure(doc.data()); else setDoc(pnlRef, DEFAULT_PNL); });
                 
                 // Budgets listener
-                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`);
+                const budgetsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets');
                 const unsubBudgets = onSnapshot(budgetsRef, (doc) => { if (doc.exists()) setBudgets(doc.data()); });
 
                 const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === 'personal');
                     data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
                     setTransactions(data); 
                 });
                 const qRec = query(collection(db, 'artifacts', appId, 'users', user.uid, 'recurring'));
                 const unsubRec = onSnapshot(qRec, (snapshot) => { 
-                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === currentProfile);
+                    let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === 'personal');
                     setRecurringRules(data); 
                 });
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); unsubBudgets(); };
-            }, [user, currentProfile]);
+            }, [user]);
 
-            const updateRates = async (newRates) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `rates_${currentProfile}`), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
-            const updatePnl = async (newPnl) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `pnl_${currentProfile}`), newPnl); };
-            const updateBudgets = async (newBudgets) => { if(!user || !currentProfile) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', `budgets_${currentProfile}`), newBudgets); };
+            const updateRates = async (newRates) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); };
+            const updatePnl = async (newPnl) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'pnl'), newPnl); };
+            const updateBudgets = async (newBudgets) => { if(!user) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'budgets'), newBudgets); };
 
             const handleEditTransaction = (tx) => {
                 setEditingTransaction(tx);
@@ -900,15 +925,21 @@
                 setEditingTransaction(null);
             };
 
-            if (!user || !currentProfile) {
-                return React.createElement(LoginScreen, { onSelectProfile: (id) => setCurrentProfile(id) });
+            const handleLogout = async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                }
+            };
+
+            if (!user) {
+                return React.createElement(LoginScreen, { onLogin: () => {} });
             }
-            
-            const profileLabel = `Usuario ${currentProfile.split('_')[1]}`; 
 
             return React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col text-white" },
                 React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
-                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), currentProfileLabel: profileLabel, onLogout: () => setCurrentProfile(null) }) :
+                    currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, onOpenConfig: () => setShowConfigModal(true), user, onLogout: handleLogout }) :
                     currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction }) :
                     currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure, recurringRules }) : 
                     currentTab === 'budget' ? React.createElement(BudgetView, { pnlStructure, budgets, onUpdateBudgets: updateBudgets, transactions }) :
@@ -946,7 +977,8 @@
                     }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                 ),
 
-                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: null, initialData: editingTransaction })
+                showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: 'personal', initialData: editingTransaction }),
+                showConfigModal && React.createElement(ConfigView, { onClose: () => setShowConfigModal(false), pnlData: pnlStructure, onUpdatePnl: updatePnl })
             );
         };
 
