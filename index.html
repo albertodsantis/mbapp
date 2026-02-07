@@ -131,17 +131,13 @@
             signInWithEmailAndPassword,
             createUserWithEmailAndPassword
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        // CAMBIO IMPORTANTE: Importamos initializeFirestore para configuración avanzada
-        import { getFirestore, initializeFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, limit, addDoc, deleteDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // CAMBIO CRÍTICO: Importamos memoryLocalCache para evitar errores en iframes
+        import { getFirestore, initializeFirestore, memoryLocalCache, collection, doc, setDoc, onSnapshot, query, orderBy, limit, addDoc, deleteDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // CONFIGURACIÓN DINÁMICA
         let firebaseConfig;
         let appId;
 
-        // --- FORZADO PARA ALBERTO ---
-        // Comentamos la detección automática para asegurar que usa TUS credenciales reales siempre
-        // if (typeof __firebase_config !== 'undefined') { ... } else { ... }
-        
         firebaseConfig = {
             apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
             authDomain: "sencillo-app-40a36.firebaseapp.com",
@@ -152,7 +148,7 @@
             appId: "1:27193285455:web:6cb0f8ac14f0e36fb0433a"
         };
         
-        // Usamos el ID del proyecto como nombre de carpeta para evitar confusiones
+        // Usamos el ID del proyecto como nombre de carpeta para sincronizar con tus reglas
         appId = 'sencillo-app-40a36';
 
         // Inicializar Firebase
@@ -161,22 +157,17 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             
-            // CAMBIO CRÍTICO: Usar initializeFirestore con experimentalForceLongPolling
-            // Esto soluciona el problema de que se quede "cargando" infinitamente en algunas redes.
+            // SOLUCIÓN AL "HANGING": Usar memoryLocalCache
+            // Esto evita que Firebase intente usar IndexedDB, que suele fallar en iframes/previsualizaciones
             db = initializeFirestore(app, {
-                experimentalForceLongPolling: true
+                localCache: memoryLocalCache() 
             });
             
-            console.log("Firebase inicializado (FORZADO) con Project ID:", firebaseConfig.projectId);
+            console.log("Firebase inicializado (Modo Memoria) con Project ID:", firebaseConfig.projectId);
         } catch (error) {
             console.error("Error inicializando Firebase:", error);
-            // Si ya existe (hot reload), intentamos obtener la instancia
-            try {
-                // Fallback por si acaso
-                db = getFirestore();
-            } catch(e) {
-                alert("Error crítico de inicialización. Recarga la página.");
-            }
+            // Fallback
+            try { db = getFirestore(); } catch(e) {}
         }
 
         // --- CONSTANTES ---
