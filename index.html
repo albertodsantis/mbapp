@@ -152,7 +152,10 @@
                 messagingSenderId: "27193285455",
                 appId: "1:27193285455:web:6cb0f8ac14f0e36fb0433a"
             };
-            appId = 'finanzas-ve-app';
+            
+            // CAMBIO: Ahora usamos el mismo ID del proyecto como carpeta
+            // Esto es para que no te confundas. La carpeta en Firestore se llamará 'sencillo-app-40a36'
+            appId = firebaseConfig.projectId; 
         }
 
         // Inicializar Firebase
@@ -388,6 +391,7 @@
             const [newConcept, setNewConcept] = useState("");
             const [activeSegment, setActiveSegment] = useState("ingresos"); 
             const [isSaved, setIsSaved] = useState(false);
+            const [testStatus, setTestStatus] = useState(null);
 
             useEffect(() => setLocalPnl(pnlData), [pnlData]);
 
@@ -407,6 +411,25 @@
                 onUpdatePnl(localPnl);
                 setIsSaved(true);
                 setTimeout(() => setIsSaved(false), 2000);
+            };
+            
+            const runConnectionTest = async () => {
+                setTestStatus("Probando...");
+                try {
+                    // Try to write a timestamp to a test document
+                    const testRef = doc(db, 'artifacts', appId, 'users', userId, 'system', 'connection_test');
+                    await setDoc(testRef, { 
+                        last_check: new Date().toISOString(),
+                        status: "ok",
+                        platform: navigator.userAgent
+                    });
+                    setTestStatus("✅ ÉXITO: Conexión y escritura funcionan.");
+                    alert("¡Conexión exitosa! La base de datos responde y permite escribir.");
+                } catch (e) {
+                    console.error(e);
+                    setTestStatus("❌ ERROR: " + e.code);
+                    alert("ERROR DE PERMISOS:\n" + e.message + "\n\nPOR FAVOR: Ve a Firebase Console -> Firestore Database -> Rules y pega las reglas que te envié.");
+                }
             };
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)] bg-app-bg" },
@@ -453,11 +476,19 @@
                     ),
                     
                     // --- DIAGNÓSTICO PARA ALBERTO ---
-                    React.createElement('div', { className: "bg-gray-900/50 p-4 rounded-2xl border border-white/5 text-xs text-gray-500 space-y-1" },
-                        React.createElement('p', { className: "font-bold uppercase mb-2 text-gray-400" }, "Diagnóstico de Conexión"),
+                    React.createElement('div', { className: "bg-gray-900/50 p-4 rounded-2xl border border-white/5 text-xs text-gray-500 space-y-3" },
+                        React.createElement('p', { className: "font-bold uppercase text-gray-400" }, "Diagnóstico de Conexión"),
                         React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "User ID:"), React.createElement('span', { className: "font-mono" }, userId ? userId.slice(0,8) + "..." : "No auth")),
                         React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Project:"), React.createElement('span', { className: "font-mono" }, firebaseConfig.projectId)),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "App ID (Path):"), React.createElement('span', { className: "font-mono" }, appId))
+                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "App ID (Path):"), React.createElement('span', { className: "font-mono" }, appId)),
+                        
+                        React.createElement('div', { className: "pt-2 border-t border-white/5" },
+                            React.createElement('button', { 
+                                onClick: runConnectionTest,
+                                className: "w-full py-2 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl font-bold hover:bg-indigo-500/30 transition-colors"
+                            }, "PROBAR ESCRITURA EN DB")
+                        ),
+                        testStatus && React.createElement('p', { className: `text-center font-bold ${testStatus.includes('ERROR') ? 'text-red-400' : 'text-emerald-400'}` }, testStatus)
                     )
                 )
             );
