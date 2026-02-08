@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v3.3</title>
+    <title>Sencillo v3.4</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -145,12 +145,24 @@
             addDoc, 
             deleteDoc, 
             updateDoc, 
-            where,
-            terminate,
-            clearIndexedDbPersistence
+            where
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- SISTEMA DE LOGS INTERNO PARA DEBUG ---
+        // --- CONFIGURACIÓN GLOBAL (FIX PARA ERROR DE VARIABLE) ---
+        const ROOT_COLLECTION = 'projects';
+        const PROJECT_DOC_ID = 'sencillo-app-40a36';
+        
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
+            authDomain: "sencillo-app-40a36.firebaseapp.com",
+            databaseURL: "https://sencillo-app-40a36-default-rtdb.firebaseio.com",
+            projectId: "sencillo-app-40a36",
+            storageBucket: "sencillo-app-40a36.firebasestorage.app",
+            messagingSenderId: "27193285455",
+            appId: "1:27193285455:web:6cb0f8ac14f0e36fb0433a"
+        };
+
+        // --- SISTEMA DE LOGS INTERNO ---
         const logs = [];
         const originalConsoleLog = console.log;
         const originalConsoleError = console.error;
@@ -190,56 +202,24 @@
             }
         }
 
-        // --- CONFIGURACIÓN DE FIREBASE ---
-        const getFirebaseConfig = () => {
-             if (typeof __firebase_config !== 'undefined') {
-                console.log("Usando Configuración de Canvas");
-                return JSON.parse(__firebase_config);
-             }
-             // Producción (Netlify) - COPIADA DE TUS CAPTURAS
-             console.log("Usando Configuración Hardcoded (Prod)");
-             return {
-                  apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
-                  authDomain: "sencillo-app-40a36.firebaseapp.com",
-                  databaseURL: "https://sencillo-app-40a36-default-rtdb.firebaseio.com",
-                  projectId: "sencillo-app-40a36",
-                  storageBucket: "sencillo-app-40a36.firebasestorage.app",
-                  messagingSenderId: "27193285455",
-                  appId: "1:27193285455:web:6cb0f8ac14f0e36fb0433a"
-             };
-        };
-
-        const firebaseConfig = getFirebaseConfig();
-        const isCanvasEnv = typeof __app_id !== 'undefined';
-        
-        // IDs y Rutas
-        const appId = isCanvasEnv ? __app_id : 'sencillo-app-40a36';
-        const rootCollection = isCanvasEnv ? 'artifacts' : 'projects'; 
-        
-        // NOMBRE DE LA BASE DE DATOS (CRÍTICO: NO es '(default)', es tu ID de proyecto)
-        const databaseId = "sencillo-app-40a36";
-
         // Inicializar Firebase
         let app, auth, db;
         try {
-            app = initializeApp(firebaseConfig);
+            app = initializeApp(FIREBASE_CONFIG);
             auth = getAuth(app);
             
-            // --- FIX CRÍTICO: CONECTAR A DB NOMBRADA ---
-            // Tu error "database (default) does not exist" significa que tu DB no es la default.
-            // Tu captura muestra que se llama "sencillo-app-40a36".
             try {
-                // initializeFirestore(app, settings, databaseId)
+                // Conectar explícitamente a la DB nombrada (sencillo-app-40a36)
                 db = initializeFirestore(app, { 
                     localCache: memoryLocalCache()
-                }, databaseId);
-                console.log(`Modo DB: Conectado a base de datos "${databaseId}"`);
+                }, PROJECT_DOC_ID);
+                console.log(`Modo DB: Conectado a base de datos "${PROJECT_DOC_ID}"`);
             } catch (e) {
                 console.error("Error conectando a DB nombrada, fallback:", e);
                 db = getFirestore(app); 
             }
             
-            console.log(`Firebase OK. Path: ${rootCollection}/${appId}`);
+            console.log(`Firebase OK. Path: ${ROOT_COLLECTION}/${PROJECT_DOC_ID}`);
         } catch (error) {
             console.error("CRITICAL: Error inicializando Firebase:", error);
         }
@@ -273,7 +253,7 @@
                     )
                 ),
                 React.createElement('div', { className: "pt-2 text-gray-500 text-[10px]" }, 
-                    `DB ID: ${databaseId} | Path: ${rootCollection}`
+                    `DB ID: ${PROJECT_DOC_ID} | Path: ${ROOT_COLLECTION}`
                 )
             );
         };
@@ -360,20 +340,6 @@
             const [loading, setLoading] = useState(false);
             const [errorMsg, setErrorMsg] = useState(null);
             
-            useEffect(() => {
-                const autoAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try { 
-                            await signInWithCustomToken(auth, __initial_auth_token); 
-                        } catch (e) { 
-                            console.warn("Auto-auth failed:", e);
-                            try { await signInAnonymously(auth); } catch(err) { console.error("Anon failed", err); }
-                        }
-                    }
-                };
-                if(auth) autoAuth();
-            }, []);
-
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setLoading(true);
@@ -542,7 +508,7 @@
                 const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("La red tarda demasiado (Timeout)")), 15000));
                 
                 try {
-                    const testRef = doc(db, rootCollection, appId, 'users', userId, 'system', 'connection_test');
+                    const testRef = doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', userId, 'system', 'connection_test');
                     
                     const writeOp = setDoc(testRef, { 
                         last_check: new Date().toISOString(),
@@ -552,7 +518,7 @@
                     
                     await Promise.race([writeOp, timeout]);
                     
-                    const msg = `✅ ÉXITO (${rootCollection}/${appId})`;
+                    const msg = `✅ ÉXITO (${ROOT_COLLECTION}/${PROJECT_DOC_ID})`;
                     console.log(msg);
                     setTestStatus(msg);
                     alert("¡CONEXIÓN EXITOSA!\n\nLa base de datos respondió correctamente.\nRevisa tu consola de Firebase ahora.");
@@ -567,7 +533,7 @@
                 React.createElement('div', { className: "p-6" },
                     React.createElement('div', { className: "flex justify-between items-center mb-1" },
                         React.createElement('h2', { className: "text-3xl font-bold text-white tracking-tight" }, "Configuración"),
-                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v3.3")
+                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v3.4")
                     ),
                     React.createElement('p', { className: "text-gray-400 font-light" }, "Personaliza tus categorías")
                 ),
@@ -614,15 +580,15 @@
                             React.createElement(Database, { size: 14, className: "text-brand" }),
                             React.createElement('p', { className: "font-bold uppercase text-gray-300" }, "Diagnóstico de Conexión")
                         ),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Project:"), React.createElement('span', { className: "font-mono" }, firebaseConfig.projectId)),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Collection:"), React.createElement('span', { className: "font-mono text-brand" }, rootCollection)),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Database ID:"), React.createElement('span', { className: "font-mono text-brand" }, databaseId)),
+                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "User ID:"), React.createElement('span', { className: "font-mono" }, userId ? userId.slice(0,8) + "..." : "No auth")),
+                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Project:"), React.createElement('span', { className: "font-mono" }, FIREBASE_CONFIG.projectId)),
+                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Path:"), React.createElement('span', { className: "font-mono text-brand" }, `${ROOT_COLLECTION}/${PROJECT_DOC_ID}`)),
                         
                         React.createElement('div', { className: "pt-2 border-t border-white/5" },
                             React.createElement('button', { 
                                 onClick: runConnectionTest,
                                 className: "w-full py-3 bg-brand/20 text-brand border border-brand/30 rounded-xl font-bold hover:bg-brand/30 transition-colors flex items-center justify-center gap-2"
-                            }, React.createElement(ShieldCheck, { size: 16 }), "PROBAR ESCRITURA")
+                            }, React.createElement(ShieldCheck, { size: 16 }), "PROBAR ESCRITURA EN DB")
                         ),
                         testStatus && React.createElement('p', { className: `text-center font-bold ${testStatus.includes('ERROR') ? 'text-red-400' : 'text-emerald-400'}` }, testStatus)
                     )
@@ -812,7 +778,8 @@
             );
         };
 
-        const TransactionModal = ({ onClose, rates, userId, pnlStructure, profileId, initialData }) => {
+        // PASO CRÍTICO: Recibir projectDocId como prop para evitar el error de scope
+        const TransactionModal = ({ onClose, rates, userId, pnlStructure, profileId, initialData, projectDocId }) => {
             const isEditing = !!initialData;
             const [segment, setSegment] = useState(initialData?.segment || 'gastos_variables'); 
             const [amount, setAmount] = useState(initialData ? initialData.amount.toString() : '');
@@ -857,19 +824,19 @@
                 const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate, profileId: 'personal' };
 
                 try {
-                    // Path corregido: rootCollection/appIdDoc/users/userId/transactions/ID
+                    // Usar projectDocId pasado por props
                     if (isEditing) {
-                        await setDoc(doc(db, rootCollection, appIdDoc, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
+                        await setDoc(doc(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
                     } else {
-                        await addDoc(collection(db, rootCollection, appIdDoc, 'users', userId, 'transactions'), transactionData);
+                        await addDoc(collection(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'transactions'), transactionData);
                         if (recurrence !== 'none') {
-                            await addDoc(collection(db, rootCollection, appIdDoc, 'users', userId, 'recurring'), { ...transactionData, frequency: recurrence, startDate: finalDate });
+                            await addDoc(collection(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'recurring'), { ...transactionData, frequency: recurrence, startDate: finalDate });
                         }
                     }
                     onClose();
                 } catch (error) {
                     console.error("Error saving transaction:", error);
-                    alert("¡Error al guardar en Firebase! " + error.message); // ALERTA VISIBLE
+                    alert("¡Error al guardar en Firebase! " + error.message); 
                 } finally {
                     setIsSaving(false); 
                 }
@@ -879,8 +846,8 @@
                 if (confirm("¿Estás seguro de eliminar este movimiento?")) {
                     setIsSaving(true);
                     try {
-                        // Path corregido
-                        await deleteDoc(doc(db, rootCollection, appIdDoc, 'users', userId, 'transactions', initialData.id));
+                        // Usar projectDocId pasado por props
+                        await deleteDoc(doc(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'transactions', initialData.id));
                         onClose();
                     } catch (error) {
                         alert("Error al eliminar: " + error.message);
@@ -899,7 +866,6 @@
                         React.createElement('button', { onClick: onClose, className: "p-3 bg-dark-highlight rounded-full text-gray-400 hover:text-white transition-colors" }, React.createElement(X, { size: 24 }))
                     ),
                     
-                    // FIXED LAYOUT: Scrollable pills for segments
                     React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide" }, 
                         Object.keys(SEGMENTS).map(key => 
                             React.createElement('button', { 
@@ -912,7 +878,6 @@
                     
                     React.createElement('form', { onSubmit: handleSubmit, className: "space-y-6" },
                         
-                        // Fila combinada: Monto + Moneda
                         React.createElement('div', { className: "flex gap-3" },
                             React.createElement('div', { className: "relative flex-1" },
                                 React.createElement('span', { className: "absolute left-5 top-5 text-gray-500 font-bold" }, currency === 'USD' ? '$' : 'Bs'),
@@ -921,7 +886,6 @@
                             React.createElement('select', { value: currency, onChange: e => setCurrency(e.target.value), className: "bg-dark-surface text-white font-bold rounded-2xl px-4 focus:outline-none border border-white/10" }, React.createElement('option', { value: "VES" }, "Bs"), React.createElement('option', { value: "USD" }, "USD"))
                         ),
 
-                        // FIXED LAYOUT: Grid for Date and Concept to avoid overlap
                         React.createElement('div', { className: "grid grid-cols-12 gap-3" },
                              React.createElement('div', { className: "col-span-5" },
                                 React.createElement('label', { className: "text-[10px] font-bold text-gray-500 uppercase ml-1 tracking-wider mb-1 block" }, "Fecha"),
@@ -1198,8 +1162,8 @@
                     return;
                 }
 
-                // PATHS CORREGIDOS: /artifacts/{appId}/users/{userId}/...
-                const userRef = doc(db, rootCollection, appId, 'users', user.uid);
+                // PATHS CORREGIDOS: /projects/{PROJECT_DOC_ID}/users/{userId}/...
+                const userRef = doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid);
                 const ratesRef = doc(userRef, 'settings', 'rates');
                 const pnlRef = doc(userRef, 'settings', 'pnl');
                 const budgetsRef = doc(userRef, 'settings', 'budgets');
@@ -1246,21 +1210,21 @@
             const updateRates = async (newRates) => { 
                 if(!user) return; 
                 try {
-                    await setDoc(doc(db, rootCollection, appId, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); 
+                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); 
                 } catch(e) { alert("Error guardando tasas: " + e.message); }
             };
             
             const updatePnl = async (newPnl) => { 
                 if(!user) return; 
                 try {
-                    await setDoc(doc(db, rootCollection, appId, 'users', user.uid, 'settings', 'pnl'), newPnl); 
+                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'pnl'), newPnl); 
                 } catch(e) { alert("Error guardando config: " + e.message); }
             };
             
             const updateBudgets = async (newBudgets) => { 
                 if(!user) return; 
                 try {
-                    await setDoc(doc(db, rootCollection, appId, 'users', user.uid, 'settings', 'budgets'), newBudgets); 
+                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'budgets'), newBudgets); 
                 } catch(e) { alert("Error guardando presupuesto: " + e.message); }
             };
 
@@ -1331,7 +1295,15 @@
                         }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                     ),
 
-                    showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure: pnlStructure, profileId: 'personal', initialData: editingTransaction })
+                    showTransactionModal && React.createElement(TransactionModal, { 
+                        onClose: handleCloseModal, 
+                        rates, 
+                        userId: user.uid, 
+                        pnlStructure: pnlStructure, 
+                        profileId: 'personal', 
+                        initialData: editingTransaction,
+                        projectDocId: PROJECT_DOC_ID 
+                    })
                 )
             );
         };
