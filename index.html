@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v3.9</title>
+    <title>Sencillo v4.0 Premium</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -16,26 +15,33 @@
                 extend: {
                     colors: {
                         dark: {
-                            base: '#050505',    // Negro casi puro
-                            surface: '#121212', // Gris muy oscuro para tarjetas
-                            highlight: '#1E1E1E', // Para inputs/hovers
+                            base: '#020617',    // Slate 950 (Fondo Principal - Más rico que negro)
+                            surface: '#0f172a', // Slate 900 (Paneles secundarios)
+                            card: '#1e293b',    // Slate 800 (Tarjetas flotantes)
+                            highlight: '#334155', // Slate 700 (Inputs/Hovers)
                         },
                         brand: {
-                            light: '#6EE7B7', // Emerald 300
-                            DEFAULT: '#10B981', // Emerald 500
+                            light: '#34d399', // Emerald 400
+                            DEFAULT: '#10b981', // Emerald 500
                             dark: '#047857',   // Emerald 700
+                            glow: 'rgba(16, 185, 129, 0.5)' // Sombra Neon
                         }
                     },
                     fontFamily: {
-                        sans: ['Outfit', 'sans-serif'], // Tipografía moderna geométrica
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon': '0 0 20px -5px rgba(16, 185, 129, 0.3)', // Brillo verde suave
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
                     },
                     backgroundImage: {
-                        'card-gradient': 'linear-gradient(135deg, #34D399 0%, #059669 100%)', // Degradado verde rico
-                        'app-bg': 'radial-gradient(circle at 50% 0%, #1e293b 0%, #050505 40%)', // Brillo sutil arriba
+                        'card-gradient': 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                        'app-bg': 'radial-gradient(circle at 50% 0%, #1e293b 0%, #020617 40%)', // Luz cenital
                     },
                     animation: {
                         'fade-in': 'fadeIn 0.3s ease-out',
                         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'bounce-in': 'bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                     },
                     keyframes: {
                         fadeIn: {
@@ -45,6 +51,10 @@
                         slideUp: {
                             '0%': { transform: 'translateY(100%)' },
                             '100%': { transform: 'translateY(0)' },
+                        },
+                        bounceIn: {
+                            '0%': { transform: 'scale(0)' },
+                            '100%': { transform: 'scale(1)' }
                         }
                     }
                 }
@@ -52,7 +62,6 @@
         }
     </script>
     
-    <!-- React & ReactDOM -->
     <script type="importmap">
         {
             "imports": {
@@ -63,7 +72,6 @@
         }
     </script>
     
-    <!-- Fuente Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -73,7 +81,7 @@
             -webkit-tap-highlight-color: transparent; 
             overscroll-behavior-y: none; 
             font-family: 'Outfit', sans-serif; 
-            background-color: #050505;
+            background-color: #020617; /* Nuevo tono base Slate 950 */
             color: #ffffff;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -81,27 +89,34 @@
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         
-        /* Estilos P&L Oscuro Mejorado */
+        /* === ESTILOS PREMIUM === */
+
+        /* Efecto Glass Premium Refinado */
+        .glass-panel-premium {
+            background: rgba(15, 23, 42, 0.6); /* Slate 900 con transparencia */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Botones con feedback táctil */
+        .btn-press { transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-press:active { transform: scale(0.96); }
+
+        /* Estilos P&L (Mantener funcionalidad tablas) */
         .pnl-table-container { overflow-x: auto; position: relative; }
         .pnl-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; }
-        .pnl-cell { padding: 14px 16px; white-space: nowrap; border-bottom: 1px solid #1E1E1E; color: #A1A1AA; text-align: right; }
-        .pnl-cell-head { font-weight: 600; background-color: #050505; color: #6EE7B7; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; position: sticky; top: 0; z-index: 10; text-align: center; border-bottom: 1px solid #333; }
-        .pnl-col-sticky { position: sticky; left: 0; background-color: #050505; z-index: 20; border-right: 1px solid #1E1E1E; text-align: left; min-width: 140px; }
+        .pnl-cell { padding: 14px 16px; white-space: nowrap; border-bottom: 1px solid #1E1E1E; color: #94a3b8; text-align: right; }
+        .pnl-cell-head { font-weight: 600; background-color: #020617; color: #34d399; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; position: sticky; top: 0; z-index: 10; text-align: center; border-bottom: 1px solid #334155; }
+        .pnl-col-sticky { position: sticky; left: 0; background-color: #020617; z-index: 20; border-right: 1px solid #1e293b; text-align: left; min-width: 140px; }
         .pnl-col-sticky.pnl-cell-head { z-index: 30; } 
-        .pnl-row-group-header { background-color: #121212; font-weight: 700; color: #FFFFFF; }
-        .pnl-row-total { background-color: #0f172a; font-weight: 700; color: #34D399; }
-        .pnl-row-net { background-color: #121212; font-weight: 800; color: #10B981; border-top: 1px solid #333; }
-        .pnl-row-available { background-color: #121212; font-weight: 800; color: #3B82F6; border-top: 1px solid #333; }
+        .pnl-row-group-header { background-color: #0f172a; font-weight: 700; color: #FFFFFF; }
+        .pnl-row-total { background-color: #1e293b; font-weight: 700; color: #34d399; }
+        .pnl-row-net { background-color: #0f172a; font-weight: 800; color: #10B981; border-top: 1px solid #333; }
+        .pnl-row-available { background-color: #0f172a; font-weight: 800; color: #3B82F6; border-top: 1px solid #333; }
 
-        /* Efecto Glass */
-        .glass-panel {
-            background: rgba(30, 30, 30, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        /* Ajuste inputs date en dark mode */
+        /* Ajuste inputs date */
         ::-webkit-calendar-picker-indicator { filter: invert(1); }
     </style>
 </head>
@@ -223,7 +238,7 @@
             console.error("CRITICAL: Error inicializando Firebase:", error);
         }
 
-        // --- DEBUGGER FLOTANTE (RESTAURADO) ---
+        // --- DEBUGGER FLOTANTE ---
         const DebugPanel = () => {
             const [isOpen, setIsOpen] = useState(false);
             const [logList, setLogList] = useState(logs);
@@ -313,20 +328,20 @@
         // --- COMPONENTES UI ---
 
         const Card = ({ children, className = "" }) => (
-            React.createElement('div', { className: `bg-dark-surface p-6 rounded-3xl border border-white/5 ${className}` }, children)
+            React.createElement('div', { className: `glass-panel-premium p-6 rounded-3xl ${className}` }, children)
         );
 
         const Button = ({ children, onClick, variant = 'primary', className = '', type="button", disabled = false }) => {
             const variants = {
-                primary: "bg-card-gradient text-white shadow-lg shadow-emerald-500/20 font-bold border border-white/10", 
-                secondary: "bg-dark-highlight text-white border border-white/10 hover:bg-white/10",
-                danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20",
+                primary: "btn-press bg-card-gradient text-white shadow-neon font-bold border border-white/10", 
+                secondary: "btn-press bg-dark-highlight text-white border border-white/10 hover:bg-white/10",
+                danger: "btn-press bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20",
                 ghost: "text-gray-400 hover:text-white hover:bg-white/5",
                 indigo: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/30",
             };
             return React.createElement('button', { 
                 onClick, type, disabled,
-                className: `px-6 py-4 rounded-2xl font-semibold text-sm tracking-wide transition-all active:scale-[0.98] flex items-center justify-center gap-2 w-full ${variants[variant]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+                className: `px-6 py-4 rounded-2xl font-semibold text-sm tracking-wide flex items-center justify-center gap-2 w-full ${variants[variant]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
             }, children);
         };
 
@@ -361,14 +376,7 @@
                 } catch (error) {
                     console.error("Auth error:", error);
                     setLoading(false);
-                    
-                    if (error.code === 'auth/invalid-email') setErrorMsg("El email no es válido.");
-                    else if (error.code === 'auth/user-disabled') setErrorMsg("Usuario deshabilitado.");
-                    else if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') setErrorMsg("Usuario no encontrado o contraseña incorrecta.");
-                    else if (error.code === 'auth/wrong-password') setErrorMsg("Contraseña incorrecta.");
-                    else if (error.code === 'auth/email-already-in-use') setErrorMsg("El email ya está registrado.");
-                    else if (error.code === 'auth/weak-password') setErrorMsg("La contraseña es muy débil (mínimo 6 caracteres).");
-                    else setErrorMsg("Error: " + error.message);
+                    setErrorMsg(error.message);
                 }
             };
 
@@ -388,7 +396,7 @@
             },
                 React.createElement('div', { className: "w-full max-w-sm" },
                     React.createElement('div', { className: "text-center mb-8" },
-                        React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/20 text-white" },
+                        React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-6 shadow-neon text-white" },
                             React.createElement(Wallet, { size: 48 })
                         ),
                         React.createElement('h1', { className: "text-4xl font-black mb-2 tracking-tight" }, "Sencillo"),
@@ -443,7 +451,7 @@
                         React.createElement('button', { 
                             type: "button",
                             onClick: handleGoogleLogin,
-                            className: "w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors mt-4"
+                            className: "w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors mt-4 btn-press"
                         }, 
                              React.createElement('svg', { className: "w-5 h-5", viewBox: "0 0 24 24" }, 
                                 React.createElement('path', { d: "M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z", fill: "#4285F4" }),
@@ -495,29 +503,13 @@
             
             const runConnectionTest = async () => {
                 setTestStatus("Probando...");
-                console.log("Iniciando prueba de escritura...");
-                
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("La red tarda demasiado (Timeout)")), 15000));
-                
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
                 try {
                     const testRef = doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', userId, 'system', 'connection_test');
-                    
-                    const writeOp = setDoc(testRef, { 
-                        last_check: new Date().toISOString(),
-                        status: "ok",
-                        platform: navigator.userAgent
-                    });
-                    
-                    await Promise.race([writeOp, timeout]);
-                    
-                    const msg = `✅ ÉXITO (${ROOT_COLLECTION}/${PROJECT_DOC_ID})`;
-                    console.log(msg);
-                    setTestStatus(msg);
-                    alert("¡CONEXIÓN EXITOSA!\n\nLa base de datos respondió correctamente.\nRevisa tu consola de Firebase ahora.");
+                    await Promise.race([setDoc(testRef, { last_check: new Date().toISOString() }), timeout]);
+                    setTestStatus("✅ CONEXIÓN OK");
                 } catch (e) {
-                    console.error("Test Error:", e);
-                    setTestStatus("❌ ERROR: " + (e.code || e.message));
-                    alert(`ERROR DE CONEXIÓN:\n\n${e.code || 'UNKNOWN'}\n\n${e.message}\n\nIntenta recargar la página o usar otra red Wi-Fi.`);
+                    setTestStatus("❌ ERROR: " + e.message);
                 }
             };
 
@@ -525,7 +517,7 @@
                 React.createElement('div', { className: "p-6" },
                     React.createElement('div', { className: "flex justify-between items-center mb-1" },
                         React.createElement('h2', { className: "text-3xl font-bold text-white tracking-tight" }, "Configuración"),
-                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v3.9")
+                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v4.0")
                     ),
                     React.createElement('p', { className: "text-gray-400 font-light" }, "Personaliza tus categorías")
                 ),
@@ -541,7 +533,7 @@
                         )
                     ),
                     
-                    React.createElement('div', { className: "bg-dark-surface p-5 rounded-3xl border border-white/10 mb-6" },
+                    React.createElement('div', { className: "glass-panel-premium p-5 rounded-3xl mb-6" },
                         React.createElement('p', { className: "text-xs text-gray-400 font-bold uppercase mb-3 tracking-wider" }, `Agregar a ${SEGMENTS[activeSegment].label}`),
                         React.createElement('div', { className: "flex gap-2" },
                             React.createElement('input', { 
@@ -550,7 +542,7 @@
                                 placeholder: "Nuevo concepto...",
                                 className: "flex-1 p-4 rounded-2xl bg-dark-base border border-white/10 text-white focus:outline-none focus:border-brand transition-colors"
                             }),
-                            React.createElement('button', { onClick: handleAdd, className: "bg-white text-black p-4 rounded-2xl hover:bg-gray-200 transition-colors" }, React.createElement(Plus, { size: 20 }))
+                            React.createElement('button', { onClick: handleAdd, className: "bg-white text-black p-4 rounded-2xl hover:bg-gray-200 transition-colors btn-press" }, React.createElement(Plus, { size: 20 }))
                         )
                     ),
 
@@ -570,19 +562,15 @@
                     React.createElement('div', { className: "bg-gray-900/50 p-4 rounded-2xl border border-white/5 text-xs text-gray-500 space-y-3" },
                         React.createElement('div', { className: "flex items-center gap-2 mb-2" },
                             React.createElement(Database, { size: 14, className: "text-brand" }),
-                            React.createElement('p', { className: "font-bold uppercase text-gray-300" }, "Diagnóstico de Conexión")
+                            React.createElement('p', { className: "font-bold uppercase text-gray-300" }, "Diagnóstico")
                         ),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "User ID:"), React.createElement('span', { className: "font-mono" }, userId ? userId.slice(0,8) + "..." : "No auth")),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Project:"), React.createElement('span', { className: "font-mono" }, FIREBASE_CONFIG.projectId)),
-                        React.createElement('div', { className: "flex justify-between" }, React.createElement('span', null, "Path:"), React.createElement('span', { className: "font-mono text-brand" }, `${ROOT_COLLECTION}/${PROJECT_DOC_ID}`)),
-                        
                         React.createElement('div', { className: "pt-2 border-t border-white/5" },
                             React.createElement('button', { 
                                 onClick: runConnectionTest,
                                 className: "w-full py-3 bg-brand/20 text-brand border border-brand/30 rounded-xl font-bold hover:bg-brand/30 transition-colors flex items-center justify-center gap-2"
-                            }, React.createElement(ShieldCheck, { size: 16 }), "PROBAR ESCRITURA EN DB")
+                            }, React.createElement(ShieldCheck, { size: 16 }), "PROBAR DB")
                         ),
-                        testStatus && React.createElement('p', { className: `text-center font-bold ${testStatus.includes('ERROR') ? 'text-red-400' : 'text-emerald-400'}` }, testStatus)
+                        testStatus && React.createElement('p', { className: `text-center font-bold mt-2 ${testStatus.includes('ERROR') ? 'text-red-400' : 'text-emerald-400'}` }, testStatus)
                     )
                 )
             );
@@ -592,20 +580,14 @@
             const [localBudgets, setLocalBudgets] = useState(budgets || {});
             const [isSaved, setIsSaved] = useState(false);
 
-            useEffect(() => {
-                setLocalBudgets(budgets || {});
-            }, [budgets]);
+            useEffect(() => { setLocalBudgets(budgets || {}); }, [budgets]);
 
-            // Calculate current spending per category for current month
             const financials = useMemo(() => {
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
                 const spending = {};
-                let income = 0;
-                let savings = 0;
-                let fixed = 0;
-                let variableTotal = 0;
+                let income = 0; let savings = 0; let fixed = 0; let variableTotal = 0;
 
                 transactions.forEach(t => {
                     const tDate = new Date(t.date);
@@ -615,23 +597,16 @@
                             if (!spending[t.category]) spending[t.category] = 0;
                             spending[t.category] += amount;
                             variableTotal += amount;
-                        } else if (t.segment === 'ingresos') {
-                            income += amount;
-                        } else if (t.segment === 'ahorro') {
-                            savings += amount;
-                        } else if (t.segment === 'gastos_fijos') {
-                            fixed += amount;
-                        }
+                        } else if (t.segment === 'ingresos') income += amount;
+                        else if (t.segment === 'ahorro') savings += amount;
+                        else if (t.segment === 'gastos_fijos') fixed += amount;
                     }
                 });
                 return { spending, income, savings, fixed, variableTotal };
             }, [transactions]);
 
             const handleBudgetChange = (category, value) => {
-                setLocalBudgets(prev => ({
-                    ...prev,
-                    [category]: parseFloat(value) || 0
-                }));
+                setLocalBudgets(prev => ({ ...prev, [category]: parseFloat(value) || 0 }));
             };
 
             const handleSave = () => {
@@ -641,10 +616,7 @@
             };
 
             const totalBudget = Object.values(localBudgets).reduce((a, b) => a + b, 0);
-            const totalSpent = Object.values(financials.spending).reduce((a, b) => a + b, 0); 
-            const remaining = totalBudget - totalSpent;
             const progress = totalBudget > 0 ? (financials.variableTotal / totalBudget) * 100 : 0;
-            
             const realAvailable = (financials.income - financials.savings) - financials.fixed;
 
             return React.createElement('div', { className: "h-full flex flex-col pt-[env(safe-area-inset-top)] bg-app-bg" },
@@ -653,14 +625,12 @@
                     React.createElement('p', { className: "text-gray-400 font-medium mt-1" }, "Control de Gastos Variables")
                 ),
                 
-                // Summary Card
                 React.createElement('div', { className: "px-6 pb-2 mt-4" },
-                     React.createElement('div', { className: "bg-dark-surface p-6 rounded-[2rem] border border-white/10 relative overflow-hidden" },
-                        React.createElement('div', { className: "absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl" }),
-                        
+                     React.createElement('div', { className: "glass-panel-premium p-6 rounded-[2rem] relative overflow-hidden" },
+                        React.createElement('div', { className: "absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl" }),
                         React.createElement('div', { className: "flex justify-between items-end mb-4 relative z-10" },
                             React.createElement('div', null,
-                                React.createElement('p', { className: "text-xs text-gray-500 font-bold uppercase tracking-wider mb-1" }, "Disponible Real (Ing - Aho - Fij)"),
+                                React.createElement('p', { className: "text-xs text-gray-500 font-bold uppercase tracking-wider mb-1" }, "Disponible Real"),
                                 React.createElement('p', { className: `text-3xl font-black ${realAvailable >= 0 ? 'text-brand' : 'text-red-500'}` }, `$${realAvailable.toFixed(2)}`)
                             ),
                             React.createElement('div', { className: "text-right" },
@@ -679,9 +649,7 @@
                         const budget = localBudgets[category] || 0;
                         const spent = financials.spending[category] || 0; 
                         const percent = budget > 0 ? (spent / budget) * 100 : 0;
-                        
-                        let barColor = 'bg-brand';
-                        let statusColor = 'text-gray-500';
+                        let barColor = 'bg-brand', statusColor = 'text-gray-500';
                         if (percent > 80) { barColor = 'bg-yellow-500'; statusColor = 'text-yellow-500'; }
                         if (percent > 100) { barColor = 'bg-red-500'; statusColor = 'text-red-500'; }
 
@@ -716,9 +684,8 @@
         };
 
         const RatesModal = ({ onClose, rates, onUpdateRate }) => {
-            const [isEditing, setIsEditing] = useState(false);
-            const [isRefreshing, setIsRefreshing] = useState(false);
             const [tempRates, setTempRates] = useState(rates);
+            const [isRefreshing, setIsRefreshing] = useState(false);
 
             useEffect(() => setTempRates(rates), [rates]);
             
@@ -729,8 +696,7 @@
             const fetchLiveRates = async () => {
                 setIsRefreshing(true);
                 const newRates = await getRatesFromAPI();
-                if (newRates && newRates.bcv && newRates.parallel) setTempRates(newRates);
-                else alert("Error al actualizar tasas.");
+                if (newRates && newRates.bcv) setTempRates(newRates);
                 setIsRefreshing(false);
             };
 
@@ -761,7 +727,7 @@
                     ),
 
                     React.createElement('div', { className: "flex gap-3" },
-                        React.createElement('button', { onClick: fetchLiveRates, className: "p-4 rounded-2xl bg-dark-surface border border-gray-700 text-white hover:bg-gray-800 transition-colors flex items-center justify-center" }, 
+                        React.createElement('button', { onClick: fetchLiveRates, className: "p-4 rounded-2xl bg-dark-surface border border-gray-700 text-white hover:bg-gray-800 transition-colors flex items-center justify-center btn-press" }, 
                             isRefreshing ? React.createElement(Loader2, { size: 20, className: "animate-spin" }) : React.createElement(RefreshCw, { size: 20 })
                         ),
                         React.createElement(Button, { onClick: handleSave, className: "flex-1" }, "Guardar Tasas")
@@ -798,7 +764,6 @@
                 if (rateType === 'bcv') rate = rates.bcv;
                 else if (rateType === 'parallel') rate = rates.parallel;
                 else rate = customRate;
-
                 if (!rate || rate === 0) return 0;
                 return parseFloat(amount) / rate;
             }, [amount, currency, rateType, customRate, rates]);
@@ -815,7 +780,6 @@
                 const transactionData = { type, segment, amount: parseFloat(amount), currency, originalRate: parseFloat(finalRate), amountUSD: calculatedUSD, category, description, date: finalDate, profileId: 'personal' };
 
                 try {
-                    // Path corregido: rootCollection/appIdDoc/users/userId/transactions/ID
                     if (isEditing) {
                         await setDoc(doc(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'transactions', initialData.id), transactionData, { merge: true });
                     } else {
@@ -827,7 +791,7 @@
                     onClose();
                 } catch (error) {
                     console.error("Error saving transaction:", error);
-                    alert("¡Error al guardar en Firebase! " + error.message); // ALERTA VISIBLE
+                    alert("¡Error al guardar en Firebase! " + error.message);
                 } finally {
                     setIsSaving(false); 
                 }
@@ -837,7 +801,6 @@
                 if (confirm("¿Estás seguro de eliminar este movimiento?")) {
                     setIsSaving(true);
                     try {
-                        // Path corregido
                         await deleteDoc(doc(db, ROOT_COLLECTION, projectDocId, 'users', userId, 'transactions', initialData.id));
                         onClose();
                     } catch (error) {
@@ -857,7 +820,6 @@
                         React.createElement('button', { onClick: onClose, className: "p-3 bg-dark-highlight rounded-full text-gray-400 hover:text-white transition-colors" }, React.createElement(X, { size: 24 }))
                     ),
                     
-                    // FIXED LAYOUT: Scrollable pills for segments
                     React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide" }, 
                         Object.keys(SEGMENTS).map(key => 
                             React.createElement('button', { 
@@ -869,8 +831,6 @@
                     ),
                     
                     React.createElement('form', { onSubmit: handleSubmit, className: "space-y-6" },
-                        
-                        // Fila combinada: Monto + Moneda
                         React.createElement('div', { className: "flex gap-3" },
                             React.createElement('div', { className: "relative flex-1" },
                                 React.createElement('span', { className: "absolute left-5 top-5 text-gray-500 font-bold" }, currency === 'USD' ? '$' : 'Bs'),
@@ -879,7 +839,6 @@
                             React.createElement('select', { value: currency, onChange: e => setCurrency(e.target.value), className: "bg-dark-surface text-white font-bold rounded-2xl px-4 focus:outline-none border border-white/10" }, React.createElement('option', { value: "VES" }, "Bs"), React.createElement('option', { value: "USD" }, "USD"))
                         ),
 
-                        // FIXED LAYOUT: Grid for Date and Concept to avoid overlap
                         React.createElement('div', { className: "grid grid-cols-12 gap-3" },
                              React.createElement('div', { className: "col-span-5" },
                                 React.createElement('label', { className: "text-[10px] font-bold text-gray-500 uppercase ml-1 tracking-wider mb-1 block" }, "Fecha"),
@@ -924,128 +883,122 @@
         const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, onEditTransaction, user, onLogout }) => {
             const [showRatesModal, setShowRatesModal] = useState(false);
             
-            // Dashboard Summary Data - Current Month Only
+            // Dashboard Logic Refactored Inside
             const dashboardData = useMemo(() => {
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
-                
-                let ingresos = 0;
-                let gastos = 0;
-                let ahorro = 0;
+                let ingresos = 0, gastos = 0, ahorro = 0;
                 
                 transactions.forEach(t => {
                     if (!t.date) return;
                     const tDate = new Date(t.date);
                     if (isNaN(tDate.getTime())) return;
-
                     if (tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
                         const amount = t.amountUSD || 0;
                         if (t.segment === 'ingresos') ingresos += amount;
                         else if (t.segment === 'ahorro') ahorro += amount;
-                        else gastos += amount; // Gastos Fijos & Variables
+                        else gastos += amount; 
                     }
                 });
-                
                 return { ingresos, gastos, ahorro };
             }, [transactions]);
             
-            const balance = transactions.reduce((acc, curr) => { return curr.type === 'income' ? acc + (curr.amountUSD || 0) : acc - (curr.amountUSD || 0); }, 0);
-            const today = new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'short' });
+            const balance = transactions.reduce((acc, curr) => curr.type === 'income' ? acc + (curr.amountUSD || 0) : acc - (curr.amountUSD || 0), 0);
 
-            return React.createElement('div', { className: "px-5 pb-32 space-y-8 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
-                // Header with Rates Button
-                React.createElement('header', { className: "flex justify-between items-center pt-2" }, 
-                    React.createElement('div', { className: "flex items-center gap-3" },
-                        React.createElement('h1', { className: "text-3xl font-black text-white tracking-tight" }, "Sencillo"),
-                        React.createElement('button', { onClick: () => setShowRatesModal(true), className: "bg-dark-surface border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 hover:bg-white/5 transition-colors" },
-                            React.createElement('span', { className: "text-xs font-bold text-brand-light" }, `Tasas ${today}`),
-                            React.createElement(ChevronDown, { size: 14, className: "text-gray-400" })
+            return React.createElement('div', { className: "px-6 pb-32 space-y-8 animate-fade-in pt-12" },
+                // 1. Header Minimalista
+                React.createElement('header', { className: "flex justify-between items-end mb-6" }, 
+                    React.createElement('div', null,
+                        React.createElement('p', { className: "text-gray-400 text-sm font-medium mb-1" }, `Hola, ${user?.displayName || (user.email ? user.email.split('@')[0] : 'Usuario')}`),
+                        React.createElement('h1', { className: "text-2xl font-bold text-white tracking-tight" }, "Resumen General")
+                    ),
+                    React.createElement('button', { 
+                        onClick: onLogout, 
+                        className: "w-10 h-10 rounded-full bg-dark-card border border-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors" 
+                    }, React.createElement(LogOut, { size: 18 }))
+                ),
+                
+                // 2. Hero Card Premium
+                React.createElement('div', { className: "relative w-full h-auto rounded-[2.5rem] p-8 overflow-hidden group shadow-neon transition-all" },
+                    React.createElement('div', { className: "absolute inset-0 bg-card-gradient" }),
+                    React.createElement('div', { className: "absolute -right-16 -top-16 w-64 h-64 bg-white/20 rounded-full blur-3xl" }),
+                    React.createElement('div', { className: "absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/20 to-transparent" }),
+                    
+                    React.createElement('div', { className: "relative z-10 flex flex-col items-center text-center" },
+                        React.createElement('span', { className: "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/20 text-emerald-100 text-[10px] font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 mb-4" }, "Balance Total"),
+                        React.createElement('h2', { className: "text-5xl font-black text-white tracking-tighter mb-1 drop-shadow-lg" }, 
+                            `$${balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                        ),
+                        React.createElement('div', { 
+                            onClick: () => setShowRatesModal(true),
+                            className: "flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md cursor-pointer transition-all border border-white/10" 
+                        },
+                            React.createElement('span', { className: "text-xs font-semibold text-white" }, `BCV: Bs ${rates.bcv}`),
+                            React.createElement('div', { className: "w-1 h-1 bg-white/50 rounded-full" }),
+                            React.createElement('span', { className: "text-xs font-semibold text-emerald-200" }, `Paralelo: Bs ${rates.parallel}`)
                         )
-                    ),
-                    // User Profile & Logout
-                    React.createElement('div', { className: "flex items-center gap-3" },
-                         user && user.photoURL ? 
-                            React.createElement('img', { src: user.photoURL, alt: "User", className: "w-8 h-8 rounded-full border border-gray-700" }) :
-                            React.createElement('div', { className: "w-8 h-8 bg-brand/20 rounded-full flex items-center justify-center text-brand font-bold text-xs" }, (user?.email || "U").charAt(0).toUpperCase()),
-                          
-                        React.createElement('button', { onClick: onLogout, className: "w-10 h-10 bg-dark-card text-gray-400 rounded-full flex items-center justify-center hover:text-white border border-white/10 transition-colors" }, React.createElement(LogOut, { size: 18 }))
                     )
                 ),
                 
-                // Balance Card
-                React.createElement('div', { className: "bg-card-gradient text-white p-8 rounded-[2.5rem] shadow-2xl shadow-emerald-900/40 relative overflow-hidden group" },
-                    React.createElement('div', { className: "absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-1000" }),
-                    React.createElement('p', { className: "text-white/80 text-xs font-bold uppercase tracking-widest mb-2" }, "Balance Disponible"),
-                    React.createElement('h2', { className: "text-5xl font-black mb-8 tracking-tight text-white" }, `$${balance.toFixed(2)}`),
-                    React.createElement('button', { onClick: onOpenAdd, className: "w-full bg-white/90 text-emerald-900 hover:bg-white py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg backdrop-blur-md" }, React.createElement(Plus, { size: 20 }), "Registrar Movimiento")
-                ),
-                
-                // Monthly Dashboard
-                React.createElement('div', { className: "grid grid-cols-3 gap-3" },
-                    React.createElement('div', { className: "bg-dark-surface p-4 rounded-2xl border border-white/5 flex flex-col items-center" },
-                        React.createElement('div', { className: "w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2 text-emerald-400" }, React.createElement(ArrowDownLeft, { size: 16 })),
-                        React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-wide mb-1" }, "Ingresos"),
-                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ingresos.toFixed(0)}`)
-                    ),
-                    React.createElement('div', { className: "bg-dark-surface p-4 rounded-2xl border border-white/5 flex flex-col items-center" },
-                        React.createElement('div', { className: "w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center mb-2 text-red-400" }, React.createElement(ArrowUpRight, { size: 16 })),
-                        React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-wide mb-1" }, "Gastos"),
-                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.gastos.toFixed(0)}`)
-                    ),
-                    React.createElement('div', { className: "bg-dark-surface p-4 rounded-2xl border border-white/5 flex flex-col items-center" },
-                        React.createElement('div', { className: "w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mb-2 text-blue-400" }, React.createElement(PiggyBank, { size: 16 })),
-                        React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-wide mb-1" }, "Ahorro"),
-                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ahorro.toFixed(0)}`)
-                    )
+                // 3. Quick Actions
+                React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                    React.createElement('button', { 
+                        onClick: onOpenAdd, 
+                        className: "btn-press bg-white text-black h-14 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-white/10" 
+                    }, React.createElement(Plus, { size: 20 }), "Nuevo Movimiento"),
+                    React.createElement('button', { 
+                        onClick: () => setShowRatesModal(true),
+                        className: "btn-press bg-dark-card text-white border border-white/10 h-14 rounded-2xl font-semibold flex items-center justify-center gap-2" 
+                    }, React.createElement(RefreshCw, { size: 18, className: "text-emerald-400" }), "Actualizar Tasas")
                 ),
 
+                // 4. Métricas Mensuales
+                React.createElement('div', { className: "grid grid-cols-3 gap-3" },
+                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1" },
+                        React.createElement('div', { className: "p-2 bg-emerald-500/10 rounded-full text-emerald-400 mb-1" }, React.createElement(TrendingUp, { size: 16 })),
+                        React.createElement('span', { className: "text-[10px] text-gray-500 uppercase font-bold" }, "Ingresos"),
+                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ingresos.toLocaleString()}`)
+                    ),
+                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1" },
+                        React.createElement('div', { className: "p-2 bg-rose-500/10 rounded-full text-rose-400 mb-1" }, React.createElement(TrendingDown, { size: 16 })),
+                        React.createElement('span', { className: "text-[10px] text-gray-500 uppercase font-bold" }, "Gastos"),
+                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.gastos.toLocaleString()}`)
+                    ),
+                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1" },
+                        React.createElement('div', { className: "p-2 bg-blue-500/10 rounded-full text-blue-400 mb-1" }, React.createElement(PiggyBank, { size: 16 })),
+                        React.createElement('span', { className: "text-[10px] text-gray-500 uppercase font-bold" }, "Ahorro"),
+                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ahorro.toLocaleString()}`)
+                    )
+                ),
+                
                 showRatesModal && React.createElement(RatesModal, { onClose: () => setShowRatesModal(false), rates, onUpdateRate })
             );
         };
 
         const HistoryView = ({ transactions, onEditTransaction }) => {
-             // Estado para el mes actual y filtro
              const [currentDate, setCurrentDate] = useState(new Date());
              const [searchQuery, setSearchQuery] = useState("");
 
-             // Filtrar transacciones por mes y año, y luego por búsqueda
              const filteredTransactions = useMemo(() => {
                  return transactions.filter(t => {
                      if (!t.date) return false;
                      const tDate = new Date(t.date);
                      if (isNaN(tDate.getTime())) return false;
-
-                     const matchDate = tDate.getMonth() === currentDate.getMonth() && 
-                                       tDate.getFullYear() === currentDate.getFullYear();
-                     
+                     const matchDate = tDate.getMonth() === currentDate.getMonth() && tDate.getFullYear() === currentDate.getFullYear();
                      if (!matchDate) return false;
-                     
                      if (!searchQuery) return true;
-                     
                      const query = searchQuery.toLowerCase();
-                     return (t.description && t.description.toLowerCase().includes(query)) || 
-                            t.category.toLowerCase().includes(query);
+                     return (t.description && t.description.toLowerCase().includes(query)) || t.category.toLowerCase().includes(query);
                  });
              }, [transactions, currentDate, searchQuery]);
 
-             const prevMonth = () => {
-                 const newDate = new Date(currentDate);
-                 newDate.setMonth(newDate.getMonth() - 1);
-                 setCurrentDate(newDate);
-             };
-
-             const nextMonth = () => {
-                 const newDate = new Date(currentDate);
-                 newDate.setMonth(newDate.getMonth() + 1);
-                 setCurrentDate(newDate);
-             };
-             
+             const prevMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() - 1); setCurrentDate(newDate); };
+             const nextMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + 1); setCurrentDate(newDate); };
              const monthLabel = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
              const capitalizeFirst = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
              return React.createElement('div', { className: "px-5 pb-32 space-y-6 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } }, 
-                // Header con Navegación
                 React.createElement('div', { className: "flex justify-between items-center" },
                     React.createElement('h2', { className: "text-3xl font-black text-white" }, "Movimientos"),
                     React.createElement('div', { className: "flex items-center gap-1 bg-dark-card p-1.5 rounded-xl border border-white/10" },
@@ -1054,23 +1007,19 @@
                         React.createElement('button', { onClick: nextMonth, className: "p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors" }, React.createElement(ChevronRight, { size: 18 }))
                     )
                 ),
-                
-                // Search Bar
                 React.createElement('div', { className: "relative" },
                     React.createElement('span', { className: "absolute left-4 top-3.5 text-gray-500" }, React.createElement(Search, { size: 18 })),
                     React.createElement('input', {
                         type: "text",
                         value: searchQuery,
                         onChange: (e) => setSearchQuery(e.target.value),
-                        placeholder: "Buscar (ej. Panadería)...",
+                        placeholder: "Buscar...",
                         className: "w-full pl-11 pr-4 py-3 bg-dark-surface border border-white/5 rounded-xl text-white focus:outline-none focus:border-brand placeholder-gray-700 transition-colors"
                     })
                 ),
-                
-                // Lista
                 filteredTransactions.length === 0 ? 
                     React.createElement('div', { className: "text-center py-10 text-gray-500 bg-dark-surface rounded-3xl border border-white/5" }, "No hay movimientos encontrados") :
-                    React.createElement('div', { className: "space-y-3" }, filteredTransactions.map(t => React.createElement('div', { key: t.id, onClick: () => onEditTransaction(t), className: "glass-panel p-4 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-white/5 active:scale-[0.98] transition-all" }, 
+                    React.createElement('div', { className: "space-y-3" }, filteredTransactions.map(t => React.createElement('div', { key: t.id, onClick: () => onEditTransaction(t), className: "glass-panel-premium p-4 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-white/5 active:scale-[0.98] transition-all" }, 
                     React.createElement('div', { className: "flex flex-col" }, 
                         React.createElement('span', { className: "font-bold text-white text-base" }, t.category), 
                         t.description && React.createElement('span', { className: "text-xs text-gray-400 font-medium" }, t.description),
@@ -1111,7 +1060,6 @@
                             React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "DISPONIBLE"), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))),
                             ['gastos_fijos', 'gastos_variables'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
                             
-                            // NUEVA FILA: TOTAL GASTOS (FIJOS + VARIABLES)
                             React.createElement('tr', null, 
                                 React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white", style: { borderTop: '2px solid #333' } }, "TOTAL GASTOS (F+V)"), 
                                 periods.map(p => {
@@ -1131,13 +1079,12 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [rates, setRates] = useState({ bcv: 0, parallel: 0 }); // Init to 0
+            const [rates, setRates] = useState({ bcv: 0, parallel: 0 });
             const [transactions, setTransactions] = useState([]);
             const [recurringRules, setRecurringRules] = useState([]);
             const [pnlStructure, setPnlStructure] = useState(DEFAULT_PNL);
-            const [budgets, setBudgets] = useState({}); // New budget state
+            const [budgets, setBudgets] = useState({});
             const [showTransactionModal, setShowTransactionModal] = useState(false);
-            const [showConfigModal, setShowConfigModal] = useState(false);
             const [currentTab, setCurrentTab] = useState('home');
             const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -1145,29 +1092,13 @@
                 const unsubscribe = onAuthStateChanged(auth, (u) => {
                     setUser(u);
                     if(u) console.log("Usuario autenticado:", u.email);
-                    else console.log("Usuario desconectado");
                 });
                 return () => unsubscribe();
             }, []);
 
             useEffect(() => {
-                if (!user) return;
+                if (!user || !db) return;
                 
-                // ERROR HANDLER HELPER
-                const handleSnapshotError = (err, context) => {
-                    console.error(`Error in ${context}:`, err);
-                    if (err.code === 'permission-denied') {
-                        alert(`Error de permisos (${context}): No tienes acceso a esta base de datos.`);
-                    }
-                };
-
-                // SAFE DB CHECK
-                if (!db) {
-                    alert("Error crítico: No hay conexión a la base de datos.");
-                    return;
-                }
-
-                // PATHS CORREGIDOS: /projects/{PROJECT_DOC_ID}/users/{userId}/...
                 const userRef = doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid);
                 const ratesRef = doc(userRef, 'settings', 'rates');
                 const pnlRef = doc(userRef, 'settings', 'pnl');
@@ -1175,87 +1106,46 @@
                 const transCol = collection(userRef, 'transactions');
                 const recCol = collection(userRef, 'recurring');
 
-                const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); }, (err) => handleSnapshotError(err, 'Rates'));
+                const unsubRates = onSnapshot(ratesRef, (doc) => { if (doc.exists()) setRates(doc.data()); });
                 
                 getRatesFromAPI().then(async (newRates) => { 
                     if (newRates && newRates.bcv && newRates.parallel) { 
-                        try {
-                            await setDoc(ratesRef, newRates, { merge: true }); 
-                        } catch(e) {
-                            console.error("Error writing initial rates", e);
-                        }
+                        try { await setDoc(ratesRef, newRates, { merge: true }); } catch(e) { console.error("Error writing initial rates", e); }
                     } 
                 });
                 
                 const unsubPnl = onSnapshot(pnlRef, (doc) => { 
                     if (doc.exists()) setPnlStructure(doc.data()); 
-                    else {
-                        setDoc(pnlRef, DEFAULT_PNL).catch(e => console.error("Error creating default PnL", e));
-                    }
-                }, (err) => handleSnapshotError(err, 'PnL Config'));
+                    else setDoc(pnlRef, DEFAULT_PNL).catch(e => console.error("Error creating default PnL", e));
+                });
                 
-                const unsubBudgets = onSnapshot(budgetsRef, (doc) => { if (doc.exists()) setBudgets(doc.data()); }, (err) => handleSnapshotError(err, 'Budgets'));
+                const unsubBudgets = onSnapshot(budgetsRef, (doc) => { if (doc.exists()) setBudgets(doc.data()); });
 
                 const q = query(transCol);
                 const unsubTrans = onSnapshot(q, (snapshot) => { 
                     let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === 'personal');
                     data.sort((a, b) => new Date(b.date) - new Date(a.date)); 
                     setTransactions(data); 
-                }, (err) => handleSnapshotError(err, 'Transactions'));
+                });
                 
                 const qRec = query(recCol);
                 const unsubRec = onSnapshot(qRec, (snapshot) => { 
                     let data = snapshot.docs.map(d => ({id: d.id, ...d.data()})).filter(t => t.profileId === 'personal');
                     setRecurringRules(data); 
-                }, (err) => handleSnapshotError(err, 'Recurring'));
+                });
                 
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubRec(); unsubBudgets(); };
             }, [user]);
 
-            const updateRates = async (newRates) => { 
-                if(!user) return; 
-                try {
-                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); 
-                } catch(e) { alert("Error guardando tasas: " + e.message); }
-            };
-            
-            const updatePnl = async (newPnl) => { 
-                if(!user) return; 
-                try {
-                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'pnl'), newPnl); 
-                } catch(e) { alert("Error guardando config: " + e.message); }
-            };
-            
-            const updateBudgets = async (newBudgets) => { 
-                if(!user) return; 
-                try {
-                    await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'budgets'), newBudgets); 
-                } catch(e) { alert("Error guardando presupuesto: " + e.message); }
-            };
-
-            const handleEditTransaction = (tx) => {
-                setEditingTransaction(tx);
-                setShowTransactionModal(true);
-            };
-
-            const handleCloseModal = () => {
-                setShowTransactionModal(false);
-                setEditingTransaction(null);
-            };
-
-            const handleLogout = async () => {
-                try {
-                    await signOut(auth);
-                } catch (error) {
-                    console.error("Error signing out:", error);
-                }
-            };
+            const updateRates = async (newRates) => { if(!user) return; try { await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(newRates.bcv), parallel: parseFloat(newRates.parallel) }); } catch(e) { alert("Error guardando tasas: " + e.message); } };
+            const updatePnl = async (newPnl) => { if(!user) return; try { await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'pnl'), newPnl); } catch(e) { alert("Error guardando config: " + e.message); } };
+            const updateBudgets = async (newBudgets) => { if(!user) return; try { await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'budgets'), newBudgets); } catch(e) { alert("Error guardando presupuesto: " + e.message); } };
+            const handleEditTransaction = (tx) => { setEditingTransaction(tx); setShowTransactionModal(true); };
+            const handleCloseModal = () => { setShowTransactionModal(false); setEditingTransaction(null); };
+            const handleLogout = async () => { try { await signOut(auth); } catch (error) { console.error("Error signing out:", error); } };
 
             if (!user) {
-                return React.createElement(React.Fragment, null,
-                    React.createElement(DebugPanel),
-                    React.createElement(LoginScreen, { onLogin: () => {} })
-                );
+                return React.createElement(React.Fragment, null, React.createElement(DebugPanel), React.createElement(LoginScreen));
             }
 
             return React.createElement(ErrorBoundary, null, 
@@ -1268,47 +1158,16 @@
                         currentTab === 'budget' ? React.createElement(BudgetView, { pnlStructure, budgets, onUpdateBudgets: updateBudgets, transactions }) :
                         currentTab === 'config' ? React.createElement(ConfigView, { pnlData: pnlStructure, onUpdatePnl: updatePnl, userId: user.uid }) : null
                     ),
-
-                    currentTab === 'home' && React.createElement('div', { className: "fixed bottom-24 right-6 z-40 safe-bottom animate-bounce-in" },
-                        React.createElement('button', { onClick: () => setShowTransactionModal(true), className: "bg-brand text-black p-5 rounded-full shadow-2xl shadow-brand/40 hover:scale-105 transition-transform border border-white/20" }, React.createElement(Plus, { size: 28 }))
+                    
+                    React.createElement('nav', { className: "glass-panel-premium border-t-0 rounded-t-[2rem] pb-safe pt-4 px-2 flex justify-around items-center z-30 safe-bottom fixed bottom-0 w-full shadow-2xl" },
+                        React.createElement('button', { onClick: () => setCurrentTab('home'), className: `p-4 rounded-2xl transition-all btn-press ${currentTab === 'home' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(Home, { size: 28, strokeWidth: currentTab === 'home' ? 2.5 : 2 })),
+                        React.createElement('button', { onClick: () => setCurrentTab('budget'), className: `p-4 rounded-2xl transition-all btn-press ${currentTab === 'budget' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(PieChart, { size: 28, strokeWidth: currentTab === 'budget' ? 2.5 : 2 })),
+                        React.createElement('button', { onClick: () => setCurrentTab('history'), className: `p-4 rounded-2xl transition-all btn-press ${currentTab === 'history' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(History, { size: 28, strokeWidth: currentTab === 'history' ? 2.5 : 2 })),
+                        React.createElement('button', { onClick: () => setCurrentTab('report'), className: `p-4 rounded-2xl transition-all btn-press ${currentTab === 'report' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(FileSpreadsheet, { size: 28, strokeWidth: currentTab === 'report' ? 2.5 : 2 })),
+                        React.createElement('button', { onClick: () => setCurrentTab('config'), className: `p-4 rounded-2xl transition-all btn-press ${currentTab === 'config' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
                     ),
 
-                    React.createElement('nav', { className: "bg-dark-surface/90 backdrop-blur-xl border-t border-white/5 pb-safe pt-4 px-2 flex justify-around items-center z-30 safe-bottom fixed bottom-0 w-full" },
-                        React.createElement('button', { 
-                            onClick: () => setCurrentTab('home'), 
-                            className: `p-4 rounded-2xl transition-all ${currentTab === 'home' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
-                        }, React.createElement(Home, { size: 28, strokeWidth: currentTab === 'home' ? 2.5 : 2 })),
-                        
-                        React.createElement('button', { 
-                            onClick: () => setCurrentTab('budget'), 
-                            className: `p-4 rounded-2xl transition-all ${currentTab === 'budget' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
-                        }, React.createElement(PieChart, { size: 28, strokeWidth: currentTab === 'budget' ? 2.5 : 2 })),
-
-                        React.createElement('button', { 
-                            onClick: () => setCurrentTab('history'), 
-                            className: `p-4 rounded-2xl transition-all ${currentTab === 'history' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
-                        }, React.createElement(History, { size: 28, strokeWidth: currentTab === 'history' ? 2.5 : 2 })),
-                        
-                        React.createElement('button', { 
-                            onClick: () => setCurrentTab('report'), 
-                            className: `p-4 rounded-2xl transition-all ${currentTab === 'report' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
-                        }, React.createElement(FileSpreadsheet, { size: 28, strokeWidth: currentTab === 'report' ? 2.5 : 2 })),
-                        
-                        React.createElement('button', { 
-                            onClick: () => setCurrentTab('config'), 
-                            className: `p-4 rounded-2xl transition-all ${currentTab === 'config' ? 'text-brand bg-white/5' : 'text-gray-500 hover:text-gray-300'}` 
-                        }, React.createElement(Settings, { size: 28, strokeWidth: currentTab === 'config' ? 2.5 : 2 }))
-                    ),
-
-                    showTransactionModal && React.createElement(TransactionModal, { 
-                        onClose: handleCloseModal, 
-                        rates, 
-                        userId: user.uid, 
-                        pnlStructure: pnlStructure, 
-                        profileId: 'personal', 
-                        initialData: editingTransaction,
-                        projectDocId: PROJECT_DOC_ID 
-                    })
+                    showTransactionModal && React.createElement(TransactionModal, { onClose: handleCloseModal, rates, userId: user.uid, pnlStructure, profileId: 'personal', initialData: editingTransaction, projectDocId: PROJECT_DOC_ID })
                 )
             );
         };
