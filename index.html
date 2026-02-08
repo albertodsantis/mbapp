@@ -238,21 +238,15 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             
-            // Lógica de Persistencia Inteligente
-            if (isCanvasEnv || isIframe) {
-                // En Iframe/Canvas usamos memoria para evitar errores de bloqueo
+            // --- CAMBIO CLAVE PARA ALBERTO ---
+            // Forzar Memory Cache SIEMPRE para evitar que IndexedDB se cuelgue en Netlify/Móviles
+            // Esto soluciona el error de "Hanging" o congelamiento al escribir.
+            try {
                 db = initializeFirestore(app, { localCache: memoryLocalCache() });
-                console.log("Modo DB: Memoria (Iframe/Canvas)");
-            } else {
-                // En Prod (Netlify/Móvil) intentamos persistencia real
-                try {
-                    db = getFirestore(app);
-                    // initializeFirestore(app, { localCache: persistentLocalCache() }); // Versión moderna
-                    console.log("Modo DB: Persistencia Estándar (Prod)");
-                } catch(e) {
-                    db = initializeFirestore(app, { localCache: memoryLocalCache() });
-                    console.error("Fallo persistencia, fallback a memoria:", e);
-                }
+                console.log("Modo DB: Memoria Forzada (Estabilidad Máxima)");
+            } catch (e) {
+                console.error("Error forzando memoria, usando default:", e);
+                db = getFirestore(app); 
             }
             
             console.log(`Firebase OK. Project: ${firebaseConfig.projectId}. Path: ${rootCollection}/${appId}`);
@@ -564,22 +558,31 @@
             const runConnectionTest = async () => {
                 setTestStatus("Probando...");
                 console.log("Iniciando prueba de escritura...");
+                
+                // TIMEOUT DE SEGURIDAD
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout de red (5s)")), 5000));
+                
                 try {
                     // Path dinámico según el entorno
                     const testRef = doc(db, rootCollection, appId, 'users', userId, 'system', 'connection_test');
-                    await setDoc(testRef, { 
+                    
+                    const writeOp = setDoc(testRef, { 
                         last_check: new Date().toISOString(),
                         status: "ok",
                         platform: navigator.userAgent
                     });
+                    
+                    // Race entre escritura y timeout
+                    await Promise.race([writeOp, timeout]);
+                    
                     const msg = `✅ ÉXITO (${rootCollection}/${appId})`;
                     console.log(msg);
                     setTestStatus(msg);
                     alert(msg);
                 } catch (e) {
                     console.error("Test Error:", e);
-                    setTestStatus("❌ ERROR: " + e.code);
-                    alert("ERROR DE ESCRITURA:\n" + e.message + "\nCode: " + e.code);
+                    setTestStatus("❌ ERROR: " + (e.code || e.message));
+                    alert("ERROR DE ESCRITURA:\n" + e.message + "\nCode: " + (e.code || 'TIMEOUT'));
                 }
             };
 
