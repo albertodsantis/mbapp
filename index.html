@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v3.0</title>
+    <title>Sencillo v3.1</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -118,8 +118,8 @@
             Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database, Terminal
         } from 'lucide-react';
 
-        // --- FIREBASE (Versión 11.6.1) ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // --- FIREBASE (Versión 10.14.1 - ESTABLE) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
         import { 
             getAuth, 
             signInWithPopup, 
@@ -130,7 +130,7 @@
             signOut,
             signInWithEmailAndPassword,
             createUserWithEmailAndPassword
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
         import { 
             getFirestore, 
             initializeFirestore, 
@@ -148,7 +148,7 @@
             updateDoc, 
             where,
             enableIndexedDbPersistence
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
         // --- SISTEMA DE LOGS INTERNO PARA DEBUG ---
         const logs = [];
@@ -159,7 +159,6 @@
             const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
             logs.push({ type, msg, time: new Date().toLocaleTimeString() });
             if (logs.length > 50) logs.shift();
-            // Mantener comportamiento original
             if (type === 'error') originalConsoleError(...args);
             else originalConsoleLog(...args);
         }
@@ -167,35 +166,24 @@
         console.log = (...args) => addLog('info', ...args);
         console.error = (...args) => addLog('error', ...args);
 
-        // --- ERROR BOUNDARY COMPONENT (Restaurado) ---
+        // --- ERROR BOUNDARY (Restaurado) ---
         class ErrorBoundary extends Component {
             constructor(props) {
                 super(props);
                 this.state = { hasError: false, error: null, errorInfo: null };
             }
-
-            static getDerivedStateFromError(error) {
-                return { hasError: true };
-            }
-
+            static getDerivedStateFromError(error) { return { hasError: true }; }
             componentDidCatch(error, errorInfo) {
                 this.setState({ error, errorInfo });
                 console.error("Uncaught Error:", error, errorInfo);
             }
-
             render() {
                 if (this.state.hasError) {
                     return React.createElement('div', { className: "h-screen flex flex-col items-center justify-center p-6 bg-dark-base text-white text-center" },
                         React.createElement(Bug, { size: 48, className: "text-red-500 mb-4" }),
                         React.createElement('h2', { className: "text-2xl font-bold mb-2" }, "¡Ups! Algo salió mal"),
                         React.createElement('p', { className: "text-gray-400 mb-4" }, "La aplicación ha encontrado un error inesperado."),
-                        React.createElement('div', { className: "bg-red-900/20 p-4 rounded-xl border border-red-500/30 text-left w-full max-w-md overflow-auto max-h-48 mb-6" },
-                            React.createElement('code', { className: "text-xs text-red-300 font-mono" }, this.state.error && this.state.error.toString())
-                        ),
-                        React.createElement('button', { 
-                            onClick: () => window.location.reload(),
-                            className: "bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                        }, "Recargar Aplicación")
+                        React.createElement('button', { onClick: () => window.location.reload(), className: "bg-white text-black px-6 py-3 rounded-xl font-bold" }, "Recargar Aplicación")
                     );
                 }
                 return this.props.children;
@@ -204,12 +192,11 @@
 
         // --- CONFIGURACIÓN DE FIREBASE ---
         const getFirebaseConfig = () => {
-             // Prioridad 1: Entorno de prueba (Canvas)
              if (typeof __firebase_config !== 'undefined') {
                 console.log("Usando Configuración de Canvas");
                 return JSON.parse(__firebase_config);
              }
-             // Prioridad 2: Producción (Netlify / Local) - Datos de tus capturas
+             // Producción (Netlify)
              console.log("Usando Configuración Hardcoded (Prod)");
              return {
                   apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
@@ -223,8 +210,6 @@
         };
 
         const firebaseConfig = getFirebaseConfig();
-        
-        // Detección de Entorno
         const isCanvasEnv = typeof __app_id !== 'undefined';
         const isIframe = window.self !== window.top;
         
@@ -238,23 +223,25 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             
-            // --- CAMBIO CLAVE PARA ALBERTO ---
-            // Forzar Memory Cache SIEMPRE para evitar que IndexedDB se cuelgue en Netlify/Móviles
-            // Esto soluciona el error de "Hanging" o congelamiento al escribir.
+            // --- FIX CRÍTICO: LONG POLLING + MEMORY CACHE ---
+            // Esto es la "medicina fuerte" para conexiones difíciles
             try {
-                db = initializeFirestore(app, { localCache: memoryLocalCache() });
-                console.log("Modo DB: Memoria Forzada (Estabilidad Máxima)");
+                db = initializeFirestore(app, { 
+                    localCache: memoryLocalCache(),
+                    experimentalForceLongPolling: true // Fuerza HTTP en vez de WebSockets (más lento pero infalible)
+                });
+                console.log("Modo DB: Memoria + Long Polling (Estabilidad Máxima)");
             } catch (e) {
-                console.error("Error forzando memoria, usando default:", e);
+                console.error("Error inicializando DB:", e);
                 db = getFirestore(app); 
             }
             
-            console.log(`Firebase OK. Project: ${firebaseConfig.projectId}. Path: ${rootCollection}/${appId}`);
+            console.log(`Firebase OK. Path: ${rootCollection}/${appId}`);
         } catch (error) {
             console.error("CRITICAL: Error inicializando Firebase:", error);
         }
 
-        // --- COMPONENTE DEBUGGER FLOTANTE ---
+        // --- DEBUGGER FLOTANTE ---
         const DebugPanel = () => {
             const [isOpen, setIsOpen] = useState(false);
             const [logList, setLogList] = useState(logs);
@@ -279,13 +266,11 @@
                 ),
                 React.createElement('div', { className: "flex-1 overflow-auto space-y-1" },
                     logList.map((l, i) => 
-                        React.createElement('div', { key: i, className: `${l.type === 'error' ? 'text-red-400' : 'text-green-400'}` },
-                            `[${l.time}] ${l.msg}`
-                        )
+                        React.createElement('div', { key: i, className: `${l.type === 'error' ? 'text-red-400' : 'text-green-400'}` }, `[${l.time}] ${l.msg}`)
                     )
                 ),
                 React.createElement('div', { className: "pt-2 text-gray-500 text-[10px]" }, 
-                    `Env: ${isCanvasEnv ? 'Canvas' : 'Prod'} | Iframe: ${isIframe} | Path: ${rootCollection}/${appId}`
+                    `DB: ${rootCollection}/${appId} | LongPolling: Active`
                 )
             );
         };
@@ -376,10 +361,9 @@
                 const autoAuth = async () => {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try { 
-                            console.log("Intentando Auto-Auth Canvas...");
                             await signInWithCustomToken(auth, __initial_auth_token); 
                         } catch (e) { 
-                            console.warn("Auto-auth failed, trying anon:", e);
+                            console.warn("Auto-auth failed:", e);
                             try { await signInAnonymously(auth); } catch(err) { console.error("Anon failed", err); }
                         }
                     }
@@ -401,14 +385,11 @@
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
                     
-                    console.log(`Intentando ${isSignUp ? 'registro' : 'login'} con:`, email);
-
                     if (isSignUp) {
                         await createUserWithEmailAndPassword(auth, email, password);
                     } else {
                         await signInWithEmailAndPassword(auth, email, password);
                     }
-                    console.log("Auth exitoso!");
                 } catch (error) {
                     console.error("Auth error:", error);
                     setLoading(false);
@@ -425,10 +406,8 @@
 
             const handleGoogleLogin = async () => {
                 try {
-                    console.log("Iniciando Google Popup...");
                     const provider = new GoogleAuthProvider();
                     await signInWithPopup(auth, provider);
-                    console.log("Google Login OK");
                 } catch (error) {
                     console.error("Google Auth Error:", error);
                     let msg = "Google Auth falló.";
@@ -438,7 +417,7 @@
                         msg = "Popup bloqueado. Permite popups en el navegador.";
                     }
                     setErrorMsg(msg);
-                    alert(msg); // Alertar fuerte
+                    alert(msg);
                 }
             };
             
@@ -460,7 +439,6 @@
                         errorMsg
                     ),
                     
-                    // Nota de carga
                     loading ? React.createElement('p', { className: "text-center text-gray-500 text-sm mb-4 animate-pulse" }, "Conectando...") : null,
 
                     React.createElement('form', { onSubmit: handleSubmit, className: "space-y-4" },
@@ -495,7 +473,6 @@
                             loading ? React.createElement(Loader2, { className: "animate-spin" }) : (isSignUp ? "Registrarse" : "Entrar")
                         ),
 
-                        // SEPARADOR Y BOTÓN DE GOOGLE
                         React.createElement('div', { className: "relative flex py-2 items-center mt-4" },
                             React.createElement('div', { className: "flex-grow border-t border-white/10" }),
                             React.createElement('span', { className: "flex-shrink mx-4 text-gray-500 text-xs" }, "O continúa con"),
@@ -559,11 +536,9 @@
                 setTestStatus("Probando...");
                 console.log("Iniciando prueba de escritura...");
                 
-                // TIMEOUT DE SEGURIDAD
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout de red (5s)")), 5000));
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("La red tarda demasiado (Timeout)")), 8000));
                 
                 try {
-                    // Path dinámico según el entorno
                     const testRef = doc(db, rootCollection, appId, 'users', userId, 'system', 'connection_test');
                     
                     const writeOp = setDoc(testRef, { 
@@ -572,17 +547,16 @@
                         platform: navigator.userAgent
                     });
                     
-                    // Race entre escritura y timeout
                     await Promise.race([writeOp, timeout]);
                     
                     const msg = `✅ ÉXITO (${rootCollection}/${appId})`;
                     console.log(msg);
                     setTestStatus(msg);
-                    alert(msg);
+                    alert("¡CONEXIÓN EXITOSA!\n\nLa base de datos respondió correctamente.\nRevisa tu consola de Firebase ahora.");
                 } catch (e) {
                     console.error("Test Error:", e);
                     setTestStatus("❌ ERROR: " + (e.code || e.message));
-                    alert("ERROR DE ESCRITURA:\n" + e.message + "\nCode: " + (e.code || 'TIMEOUT'));
+                    alert(`ERROR DE CONEXIÓN:\n\n${e.code || 'UNKNOWN'}\n\n${e.message}\n\nIntenta recargar la página o usar otra red Wi-Fi.`);
                 }
             };
 
@@ -590,7 +564,7 @@
                 React.createElement('div', { className: "p-6" },
                     React.createElement('div', { className: "flex justify-between items-center mb-1" },
                         React.createElement('h2', { className: "text-3xl font-bold text-white tracking-tight" }, "Configuración"),
-                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v3.0")
+                        React.createElement('span', { className: "text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-md" }, "v3.1")
                     ),
                     React.createElement('p', { className: "text-gray-400 font-light" }, "Personaliza tus categorías")
                 ),
