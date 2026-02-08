@@ -379,11 +379,9 @@
                     React.createElement('h2', { className: "text-3xl font-black text-white tracking-tight" }, "Presupuesto")
                 ),
                 
-                // TARJETA DE RESUMEN MEJORADA
+                // TARJETA DE RESUMEN MEJORADA (Sin efecto neón excesivo)
                 React.createElement('div', { className: "px-6 pb-2" },
                      React.createElement('div', { className: "bg-dark-surface p-6 rounded-[2.5rem] relative overflow-hidden border border-white/5" },
-                        // Fondo decorativo sutil
-                        // React.createElement('div', { className: "absolute -right-10 -top-10 w-40 h-40 bg-brand/20 rounded-full blur-3xl" }), // ELIMINADO
                         
                         React.createElement('div', { className: "flex justify-between items-end mb-6 relative z-10" },
                             React.createElement('div', null,
@@ -792,15 +790,15 @@
                             )
                         ),
 
-                        // FILA 2: Fechas (Grid 2 columnas)
-                        React.createElement('div', { className: "grid grid-cols-2 gap-3" },
-                             React.createElement('div', null,
+                        // FILA 2: Fechas (Flex con min-w-0 para evitar overlap)
+                        React.createElement('div', { className: "flex gap-3" },
+                             React.createElement('div', { className: "flex-1 min-w-0" },
                                 React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Desde"),
-                                React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center" })
+                                React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center min-w-0" })
                             ),
-                             React.createElement('div', null,
+                             React.createElement('div', { className: "flex-1 min-w-0" },
                                 React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Hasta"),
-                                React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center" })
+                                React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center min-w-0" })
                             )
                         )
                     )
