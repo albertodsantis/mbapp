@@ -246,7 +246,7 @@
                 try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (error) { setErrorMsg("Error Google Auth"); }
             };
             
-            return React.createElement('div', { className: "h-full flex flex-col items-center justify-center p-6 bg-app-bg text-white" },
+            return React.createElement('div', { className: "min-h-[100dvh] flex flex-col items-center justify-center p-6 pt-32 bg-app-bg text-white" },
                 React.createElement('div', { className: "w-full max-w-sm" },
                     React.createElement('div', { className: "text-center mb-10" },
                         React.createElement('div', { className: "w-24 h-24 bg-card-gradient rounded-3xl rotate-3 flex items-center justify-center mx-auto mb-6 shadow-neon text-white" }, React.createElement(Wallet, { size: 48 })),
@@ -374,15 +374,9 @@
             const realAvailable = (financials.income - financials.savings) - financials.fixed;
 
             return React.createElement('div', { className: "h-full flex flex-col pt-12 bg-app-bg animate-fade-in" },
-                // CABECERA ESTILO PREMIUM (Igual que Home)
-                React.createElement('div', { className: "px-6 mb-6 flex justify-between items-end" },
-                    React.createElement('div', null,
-                        React.createElement('p', { className: "text-brand text-xs font-bold uppercase tracking-widest mb-1" }, "Control Financiero"),
-                        React.createElement('h2', { className: "text-3xl font-black text-white tracking-tight" }, "Presupuesto")
-                    ),
-                    React.createElement('div', { className: "p-3 bg-dark-card border border-white/5 rounded-2xl shadow-inner-light" },
-                         React.createElement(PieChart, { className: "text-brand", size: 24 })
-                    )
+                // CABECERA ESTILO PREMIUM (Limpiada)
+                React.createElement('div', { className: "px-6 mb-6" },
+                    React.createElement('h2', { className: "text-3xl font-black text-white tracking-tight" }, "Presupuesto")
                 ),
                 
                 // TARJETA DE RESUMEN MEJORADA
@@ -777,35 +771,36 @@
             const reportData = useMemo(() => { const data = { net: {}, available: {} }; const segments = ['ingresos', 'gastos_fijos', 'gastos_variables', 'ahorro']; segments.forEach(seg => { data[seg] = { concepts: {}, total: {} }; (pnlStructure[seg] || []).forEach(concept => { data[seg].concepts[concept] = {}; periods.forEach(p => data[seg].concepts[concept][p.id] = 0); }); periods.forEach(p => data[seg].total[p.id] = 0); }); periods.forEach(p => { data.net[p.id] = 0; data.available[p.id] = 0; }); const addToData = (item, periodId) => { if (periodId && data[item.segment]) { const amount = item.amountUSD || 0; if (!data[item.segment].concepts[item.category]) { data[item.segment].concepts[item.category] = {}; periods.forEach(p => data[item.segment].concepts[item.category][p.id] = 0); } if (data[item.segment].concepts[item.category][periodId] !== undefined) { data[item.segment].concepts[item.category][periodId] += amount; } data[item.segment].total[periodId] += amount; if (SEGMENTS[item.segment].type === 'income') { data.net[periodId] += amount; } else { data.net[periodId] -= amount; } } }; transactions.forEach(t => { const tDateStr = t.date.split('T')[0]; if (tDateStr < startDate || tDateStr > endDate) return; let pId = ""; if (granularity === 'daily') { pId = tDateStr; } else if (granularity === 'monthly') { pId = tDateStr.substring(0, 7); } else if (granularity === 'yearly') { pId = tDateStr.substring(0, 4); } else if (granularity === 'weekly') { const tTime = new Date(tDateStr + "T12:00:00").getTime(); const period = periods.find((p, i) => { if (granularity === 'weekly') { const pDate = new Date(p.id + "T12:00:00"); const nextPDate = new Date(pDate); nextPDate.setDate(nextPDate.getDate() + 7); return tTime >= pDate.getTime() && tTime < nextPDate.getTime(); } return false; }); if (period) pId = period.id; } addToData(t, pId); }); recurringRules.forEach(rule => { const ruleStart = new Date(rule.startDate + "T12:00:00"); const reportEnd = new Date(endDate + "T12:00:00"); let current = new Date(ruleStart); const todayStr = new Date().toISOString().split('T')[0]; while (current <= reportEnd) { const currentStr = current.toISOString().split('T')[0]; if (currentStr > todayStr && currentStr >= startDate) { let pId = ""; if (granularity === 'daily') pId = currentStr; else if (granularity === 'monthly') pId = currentStr.substring(0, 7); else if (granularity === 'yearly') pId = currentStr.substring(0, 4); addToData(rule, pId); } if (rule.frequency === 'daily') current.setDate(current.getDate() + 1); else if (rule.frequency === 'weekly') current.setDate(current.getDate() + 7); else if (rule.frequency === 'monthly') { current.setMonth(current.getMonth() + 1); } else if (rule.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1); else break; } }); periods.forEach(p => { if(!p.id) return; const totalIncome = data.ingresos.total[p.id] || 0; const totalSavings = data.ahorro.total[p.id] || 0; const totalFixed = data.gastos_fijos.total[p.id] || 0; data.available[p.id] = (totalIncome - totalSavings) ; }); return data; }, [transactions, recurringRules, periods, granularity, startDate, endDate, pnlStructure]);
 
             return React.createElement('div', { className: "h-full flex flex-col pt-12 bg-app-bg animate-fade-in" },
-                // CABECERA MEJORADA
+                // CABECERA MEJORADA (Limpiada)
                 React.createElement('div', { className: "px-6 mb-4" },
-                    React.createElement('div', { className: "flex justify-between items-end mb-4" },
-                        React.createElement('div', null,
-                            React.createElement('p', { className: "text-brand text-xs font-bold uppercase tracking-widest mb-1" }, "Análisis"),
-                            React.createElement('h2', { className: "text-3xl font-black text-white tracking-tight" }, "Reporte")
-                        ),
-                        React.createElement('div', { className: "p-3 bg-dark-card border border-white/5 rounded-2xl shadow-inner-light" },
-                            React.createElement(FileSpreadsheet, { className: "text-brand", size: 24 })
-                        )
-                    ),
+                    React.createElement('h2', { className: "text-3xl font-black text-white tracking-tight" }, "Reporte"),
                     
-                    // BARRA DE FILTROS ESTILO GLASS
-                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-3xl flex flex-col gap-3" },
-                        React.createElement('div', { className: "flex gap-2" },
-                            React.createElement('div', { className: "flex-1" },
-                                React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Agrupar por"),
-                                React.createElement('div', { className: "relative" },
-                                    React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "w-full appearance-none bg-dark-base border border-white/10 text-white rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-brand/50" }, React.createElement('option', { value: "daily" }, "Diario"), React.createElement('option', { value: "weekly" }, "Semanal"), React.createElement('option', { value: "monthly" }, "Mensual"), React.createElement('option', { value: "yearly" }, "Anual")),
-                                    React.createElement(ChevronDown, { size: 16, className: "absolute right-3 top-3.5 text-gray-500 pointer-events-none" })
-                                )
-                            ),
-                            React.createElement('div', { className: "flex-1" },
+                    // BARRA DE FILTROS RE-DISEÑADA PARA MÓVIL (Grid Stacked)
+                    React.createElement('div', { className: "glass-panel-premium p-5 rounded-3xl flex flex-col gap-4 mt-4" },
+                        
+                        // FILA 1: Agrupar por (Full Width)
+                        React.createElement('div', { className: "w-full" },
+                            React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Agrupar por"),
+                            React.createElement('div', { className: "relative" },
+                                React.createElement('select', { value: granularity, onChange: e => setGranularity(e.target.value), className: "w-full appearance-none bg-dark-base border border-white/10 text-white rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-brand/50 transition-all" }, 
+                                    React.createElement('option', { value: "daily" }, "Diario"), 
+                                    React.createElement('option', { value: "weekly" }, "Semanal"), 
+                                    React.createElement('option', { value: "monthly" }, "Mensual"), 
+                                    React.createElement('option', { value: "yearly" }, "Anual")
+                                ),
+                                React.createElement(ChevronDown, { size: 16, className: "absolute right-3 top-3.5 text-gray-500 pointer-events-none" })
+                            )
+                        ),
+
+                        // FILA 2: Fechas (Grid 2 columnas)
+                        React.createElement('div', { className: "grid grid-cols-2 gap-3" },
+                             React.createElement('div', null,
                                 React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Desde"),
-                                React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50" })
+                                React.createElement('input', { type: "date", value: startDate, onChange: e => setStartDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center" })
                             ),
-                             React.createElement('div', { className: "flex-1" },
+                             React.createElement('div', null,
                                 React.createElement('label', { className: "text-[10px] text-gray-400 font-bold uppercase ml-2 mb-1 block" }, "Hasta"),
-                                React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50" })
+                                React.createElement('input', { type: "date", value: endDate, onChange: e => setEndDate(e.target.value), className: "w-full bg-dark-base border border-white/10 text-white rounded-xl px-3 py-3 text-sm font-medium focus:outline-none focus:border-brand/50 transition-all text-center" })
                             )
                         )
                     )
