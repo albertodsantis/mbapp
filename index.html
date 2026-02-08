@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v4.2 Premium</title>
+    <title>Sencillo v4.3 Premium</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -541,7 +541,7 @@
                         React.createElement('button', { onClick: onClose, className: "p-3 bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors" }, React.createElement(X, { size: 24 }))
                     ),
                     
-                    React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide justify-start" }, 
+                    React.createElement('div', { className: "flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide justify-start" }, 
                         Object.keys(SEGMENTS).map(key => 
                             React.createElement('button', { 
                                 key: key, onClick: () => setSegment(key), 
@@ -569,12 +569,12 @@
                             )
                         ),
 
-                        React.createElement('div', { className: "grid grid-cols-2 gap-3" },
-                             React.createElement('div', null,
+                        React.createElement('div', { className: "grid grid-cols-12 gap-3" },
+                             React.createElement('div', { className: "col-span-4" },
                                 React.createElement('label', { className: "text-[10px] font-bold text-gray-500 uppercase ml-2 mb-1 block" }, "Fecha"),
                                 React.createElement('input', { type: "date", value: date, onChange: e => setDate(e.target.value), className: "w-full p-4 bg-dark-surface/50 rounded-2xl text-white outline-none border border-white/5 font-medium text-sm text-center" })
                              ),
-                             React.createElement('div', null,
+                             React.createElement('div', { className: "col-span-8" },
                                 React.createElement('label', { className: "text-[10px] font-bold text-gray-500 uppercase ml-2 mb-1 block" }, "Categoría"),
                                 React.createElement('select', { value: category, onChange: e => setCategory(e.target.value), className: "w-full p-4 bg-dark-surface/50 text-white rounded-2xl outline-none border border-white/5 font-medium text-sm appearance-none" }, (pnlStructure && pnlStructure[segment] ? pnlStructure[segment] : []).map(c => React.createElement('option', { key: c, value: c }, c)))
                              )
@@ -764,6 +764,7 @@
                             ['ingresos', 'ahorro'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
                             React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-available" }, "DISPONIBLE"), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-available" }, Math.round(reportData.available[p.id]).toLocaleString()))),
                             ['gastos_fijos', 'gastos_variables'].map(seg => React.createElement(React.Fragment, { key: seg }, React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS[seg].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), Object.entries(reportData[seg].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS[seg].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData[seg].total[p.id]).toLocaleString()))))),
+                            
                             React.createElement('tr', null, 
                                 React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white", style: { borderTop: '2px solid #333' } }, "TOTAL GASTOS (F+V)"), 
                                 periods.map(p => {
