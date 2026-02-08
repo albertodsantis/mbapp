@@ -109,13 +109,13 @@
     <div id="root" class="h-full"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useMemo, Component } from 'react';
+        import React, { useState, useEffect, useMemo, Component, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
         import { 
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
             LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
-            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database
+            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database, Terminal
         } from 'lucide-react';
 
         // --- FIREBASE (Versión 11.6.1) ---
@@ -135,6 +135,7 @@
             getFirestore, 
             initializeFirestore, 
             memoryLocalCache, 
+            persistentLocalCache,
             collection, 
             doc, 
             setDoc, 
@@ -145,10 +146,28 @@
             addDoc, 
             deleteDoc, 
             updateDoc, 
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- ERROR BOUNDARY COMPONENT ---
+        // --- SISTEMA DE LOGS INTERNO PARA DEBUG ---
+        const logs = [];
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        
+        function addLog(type, ...args) {
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            logs.push({ type, msg, time: new Date().toLocaleTimeString() });
+            if (logs.length > 50) logs.shift();
+            // Mantener comportamiento original
+            if (type === 'error') originalConsoleError(...args);
+            else originalConsoleLog(...args);
+        }
+
+        console.log = (...args) => addLog('info', ...args);
+        console.error = (...args) => addLog('error', ...args);
+
+        // --- ERROR BOUNDARY COMPONENT (Restaurado) ---
         class ErrorBoundary extends Component {
             constructor(props) {
                 super(props);
@@ -183,13 +202,15 @@
             }
         }
 
-        // --- CONFIGURACIÓN DE FIREBASE PARA EL ENTORNO (Y TU PROYECTO REAL) ---
+        // --- CONFIGURACIÓN DE FIREBASE ---
         const getFirebaseConfig = () => {
-             // 1. Si estamos en el entorno de prueba (Canvas), usamos la config automática
+             // Prioridad 1: Entorno de prueba (Canvas)
              if (typeof __firebase_config !== 'undefined') {
+                console.log("Usando Configuración de Canvas");
                 return JSON.parse(__firebase_config);
              }
-             // 2. Si descargas este archivo y lo abres localmente, usará TU configuración real (copiada de tus fotos)
+             // Prioridad 2: Producción (Netlify / Local) - Datos de tus capturas
+             console.log("Usando Configuración Hardcoded (Prod)");
              return {
                   apiKey: "AIzaSyCAd_vju_x9wuhGtZJvvoWpt9JbRUwB63k",
                   authDomain: "sencillo-app-40a36.firebaseapp.com",
@@ -203,10 +224,11 @@
 
         const firebaseConfig = getFirebaseConfig();
         
-        // Determinar ID y Colección Raíz según el entorno
-        // En Canvas (aquí): ID del sistema y colección 'artifacts' (obligatorio por seguridad)
-        // En Local (tú): Tu ID 'sencillo-app-40a36' y colección 'projects' (como tienes en tu foto)
+        // Detección de Entorno
         const isCanvasEnv = typeof __app_id !== 'undefined';
+        const isIframe = window.self !== window.top;
+        
+        // IDs y Rutas
         const appId = isCanvasEnv ? __app_id : 'sencillo-app-40a36';
         const rootCollection = isCanvasEnv ? 'artifacts' : 'projects'; 
 
@@ -216,17 +238,63 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             
-            // Usar memoryLocalCache para evitar errores en iframes/safari
-            db = initializeFirestore(app, {
-                localCache: memoryLocalCache() 
-            });
+            // Lógica de Persistencia Inteligente
+            if (isCanvasEnv || isIframe) {
+                // En Iframe/Canvas usamos memoria para evitar errores de bloqueo
+                db = initializeFirestore(app, { localCache: memoryLocalCache() });
+                console.log("Modo DB: Memoria (Iframe/Canvas)");
+            } else {
+                // En Prod (Netlify/Móvil) intentamos persistencia real
+                try {
+                    db = getFirestore(app);
+                    // initializeFirestore(app, { localCache: persistentLocalCache() }); // Versión moderna
+                    console.log("Modo DB: Persistencia Estándar (Prod)");
+                } catch(e) {
+                    db = initializeFirestore(app, { localCache: memoryLocalCache() });
+                    console.error("Fallo persistencia, fallback a memoria:", e);
+                }
+            }
             
-            console.log(`Firebase inicializado. Project: ${firebaseConfig.projectId}. Collection: ${rootCollection}`);
+            console.log(`Firebase OK. Project: ${firebaseConfig.projectId}. Path: ${rootCollection}/${appId}`);
         } catch (error) {
-            console.error("Error inicializando Firebase:", error);
-            // Fallback silencioso
-            try { db = getFirestore(); } catch(e) {}
+            console.error("CRITICAL: Error inicializando Firebase:", error);
         }
+
+        // --- COMPONENTE DEBUGGER FLOTANTE ---
+        const DebugPanel = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [logList, setLogList] = useState(logs);
+
+            useEffect(() => {
+                if(!isOpen) return;
+                const interval = setInterval(() => setLogList([...logs]), 1000);
+                return () => clearInterval(interval);
+            }, [isOpen]);
+
+            if (!isOpen) {
+                return React.createElement('button', { 
+                    onClick: () => setIsOpen(true),
+                    className: "fixed bottom-24 left-4 z-50 bg-gray-800 text-white p-3 rounded-full shadow-lg opacity-50 hover:opacity-100"
+                }, React.createElement(Bug, { size: 20 }));
+            }
+
+            return React.createElement('div', { className: "fixed inset-0 z-50 bg-black/90 p-4 flex flex-col font-mono text-xs overflow-hidden" },
+                React.createElement('div', { className: "flex justify-between items-center mb-2 border-b border-gray-700 pb-2" },
+                    React.createElement('h3', { className: "text-brand font-bold" }, "DEBUG CONSOLE"),
+                    React.createElement('button', { onClick: () => setIsOpen(false), className: "text-white p-2" }, React.createElement(X, { size: 20 }))
+                ),
+                React.createElement('div', { className: "flex-1 overflow-auto space-y-1" },
+                    logList.map((l, i) => 
+                        React.createElement('div', { key: i, className: `${l.type === 'error' ? 'text-red-400' : 'text-green-400'}` },
+                            `[${l.time}] ${l.msg}`
+                        )
+                    )
+                ),
+                React.createElement('div', { className: "pt-2 text-gray-500 text-[10px]" }, 
+                    `Env: ${isCanvasEnv ? 'Canvas' : 'Prod'} | Iframe: ${isIframe} | Path: ${rootCollection}/${appId}`
+                )
+            );
+        };
 
         // --- CONSTANTES ---
         const DEFAULT_PNL = {
@@ -312,17 +380,14 @@
             
             useEffect(() => {
                 const autoAuth = async () => {
-                    // Si estamos en Canvas, intentamos auth seguro. Si no, anónimo.
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try { 
+                            console.log("Intentando Auto-Auth Canvas...");
                             await signInWithCustomToken(auth, __initial_auth_token); 
                         } catch (e) { 
                             console.warn("Auto-auth failed, trying anon:", e);
                             try { await signInAnonymously(auth); } catch(err) { console.error("Anon failed", err); }
                         }
-                    } else {
-                        // En local (tu PC), puedes preferir entrar directo como anónimo para probar rápido, o loguearte.
-                        // try { await signInAnonymously(auth); } catch(err) { console.error("Anon failed", err); }
                     }
                 };
                 if(auth) autoAuth();
@@ -342,11 +407,14 @@
                 try {
                     if (!auth) throw new Error("Firebase no inicializado.");
                     
+                    console.log(`Intentando ${isSignUp ? 'registro' : 'login'} con:`, email);
+
                     if (isSignUp) {
                         await createUserWithEmailAndPassword(auth, email, password);
                     } else {
                         await signInWithEmailAndPassword(auth, email, password);
                     }
+                    console.log("Auth exitoso!");
                 } catch (error) {
                     console.error("Auth error:", error);
                     setLoading(false);
@@ -363,11 +431,20 @@
 
             const handleGoogleLogin = async () => {
                 try {
+                    console.log("Iniciando Google Popup...");
                     const provider = new GoogleAuthProvider();
                     await signInWithPopup(auth, provider);
+                    console.log("Google Login OK");
                 } catch (error) {
                     console.error("Google Auth Error:", error);
-                    setErrorMsg("Google Auth falló (común en vistas previas). Por favor usa Email/Contraseña o espera el inicio anónimo.");
+                    let msg = "Google Auth falló.";
+                    if (error.code === 'auth/unauthorized-domain') {
+                        msg = "DOMINIO NO AUTORIZADO. Añade este dominio en Firebase Console > Auth > Settings.";
+                    } else if (error.code === 'auth/popup-blocked') {
+                        msg = "Popup bloqueado. Permite popups en el navegador.";
+                    }
+                    setErrorMsg(msg);
+                    alert(msg); // Alertar fuerte
                 }
             };
             
@@ -486,6 +563,7 @@
             
             const runConnectionTest = async () => {
                 setTestStatus("Probando...");
+                console.log("Iniciando prueba de escritura...");
                 try {
                     // Path dinámico según el entorno
                     const testRef = doc(db, rootCollection, appId, 'users', userId, 'system', 'connection_test');
@@ -494,11 +572,14 @@
                         status: "ok",
                         platform: navigator.userAgent
                     });
-                    setTestStatus(`✅ ÉXITO (${rootCollection}/${appId})`);
+                    const msg = `✅ ÉXITO (${rootCollection}/${appId})`;
+                    console.log(msg);
+                    setTestStatus(msg);
+                    alert(msg);
                 } catch (e) {
-                    console.error(e);
+                    console.error("Test Error:", e);
                     setTestStatus("❌ ERROR: " + e.code);
-                    alert("ERROR DE ESCRITURA:\n" + e.message);
+                    alert("ERROR DE ESCRITURA:\n" + e.message + "\nCode: " + e.code);
                 }
             };
 
@@ -799,6 +880,8 @@
                     const userTransactionsRef = collection(db, rootCollection, appId, 'users', userId, 'transactions');
                     const userRecurringRef = collection(db, rootCollection, appId, 'users', userId, 'recurring');
 
+                    console.log("Guardando transacción en:", userTransactionsRef.path);
+
                     if (isEditing) {
                         await setDoc(doc(userTransactionsRef, initialData.id), transactionData, { merge: true });
                     } else {
@@ -807,6 +890,7 @@
                             await addDoc(userRecurringRef, { ...transactionData, frequency: recurrence, startDate: finalDate });
                         }
                     }
+                    console.log("Transacción guardada OK");
                     onClose();
                 } catch (error) {
                     console.error("Error saving transaction:", error);
@@ -1110,7 +1194,11 @@
             const [editingTransaction, setEditingTransaction] = useState(null);
 
             useEffect(() => {
-                const unsubscribe = onAuthStateChanged(auth, setUser);
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    setUser(u);
+                    if(u) console.log("Usuario autenticado:", u.email);
+                    else console.log("Usuario desconectado");
+                });
                 return () => unsubscribe();
             }, []);
 
@@ -1121,8 +1209,7 @@
                 const handleSnapshotError = (err, context) => {
                     console.error(`Error in ${context}:`, err);
                     if (err.code === 'permission-denied') {
-                        // Suppress alert for common permission errors initially
-                        console.warn(`Permiso denegado en ${context}`);
+                        alert(`Error de permisos (${context}): No tienes acceso a esta base de datos.`);
                     }
                 };
 
@@ -1217,11 +1304,15 @@
             };
 
             if (!user) {
-                return React.createElement(LoginScreen, { onLogin: () => {} });
+                return React.createElement(React.Fragment, null,
+                    React.createElement(DebugPanel),
+                    React.createElement(LoginScreen, { onLogin: () => {} })
+                );
             }
 
             return React.createElement(ErrorBoundary, null, 
                 React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col text-white" },
+                    React.createElement(DebugPanel),
                     React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
                         currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenAdd: () => setShowTransactionModal(true), onEditTransaction: handleEditTransaction, user, onLogout: handleLogout }) :
                         currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction }) :
