@@ -259,6 +259,63 @@
             );
         };
 
+        // --- INTRO MODAL COMPONENT ---
+        const IntroModal = ({ onClose }) => {
+            const [dontShow, setDontShow] = useState(false);
+
+            return React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 animate-fade-in" },
+                 React.createElement('div', { className: "bg-dark-card p-6 rounded-[2rem] border border-white/10 max-w-sm w-full animate-bounce-in shadow-glass" },
+                    React.createElement('div', { className: "flex items-center gap-3 mb-6" },
+                        React.createElement('div', { className: "p-3 bg-brand/20 text-brand rounded-full" }, React.createElement(Info, { size: 24 })),
+                        React.createElement('h3', { className: "text-xl font-bold text-white" }, "Guía Rápida")
+                    ),
+
+                    React.createElement('div', { className: "space-y-5 mb-6 max-h-[55vh] overflow-y-auto pr-2" },
+                        React.createElement('div', { className: "flex gap-3" },
+                            React.createElement('div', { className: "w-6 h-6 rounded-full bg-dark-highlight flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/10" }, "1"),
+                            React.createElement('div', null,
+                                React.createElement('strong', { className: "block text-white text-sm" }, "Personalización"),
+                                React.createElement('p', { className: "text-gray-400 text-xs leading-relaxed mt-0.5" }, "Configura tus categorías de ingresos, gastos fijos y variables para adaptar la app a ti.")
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-3" },
+                            React.createElement('div', { className: "w-6 h-6 rounded-full bg-dark-highlight flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/10" }, "2"),
+                            React.createElement('div', null,
+                                React.createElement('strong', { className: "block text-white text-sm" }, "Agregar Movimientos"),
+                                React.createElement('p', { className: "text-gray-400 text-xs leading-relaxed mt-0.5" }, "Usa el botón (+) para registrar ingresos o gastos. Puedes elegir la moneda (Bs/USD) y la tasa.")
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-3" },
+                            React.createElement('div', { className: "w-6 h-6 rounded-full bg-dark-highlight flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/10" }, "3"),
+                            React.createElement('div', null,
+                                React.createElement('strong', { className: "block text-white text-sm" }, "Presupuestos"),
+                                React.createElement('p', { className: "text-gray-400 text-xs leading-relaxed mt-0.5" }, "Define límites para tus Gastos Variables y mantén siempre positivo tu Disponible Flexible.")
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-3" },
+                             React.createElement('div', { className: "w-6 h-6 rounded-full bg-dark-highlight flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/10" }, "4"),
+                             React.createElement('div', null,
+                                 React.createElement('strong', { className: "block text-white text-sm" }, "Historial y Reportes"),
+                                 React.createElement('p', { className: "text-gray-400 text-xs leading-relaxed mt-0.5" }, "Analiza tus finanzas con el historial de transacciones y los gráficos de reporte detallados.")
+                             )
+                        )
+                    ),
+
+                    React.createElement('div', { onClick: () => setDontShow(!dontShow), className: "flex items-center gap-3 mb-6 cursor-pointer p-3 -mx-2 rounded-xl hover:bg-white/5 transition-colors" },
+                        React.createElement('div', { className: `w-5 h-5 rounded border flex items-center justify-center transition-colors ${dontShow ? 'bg-brand border-brand' : 'border-gray-500 bg-transparent'}` },
+                            dontShow && React.createElement(Check, { size: 14, className: "text-black", strokeWidth: 3 })
+                        ),
+                        React.createElement('span', { className: "text-xs font-bold text-gray-400 select-none" }, "No mostrar más este mensaje")
+                    ),
+
+                    React.createElement('button', { 
+                        onClick: () => onClose(dontShow),
+                        className: "w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-gray-200 transition-colors btn-press shadow-lg"
+                    }, "Entendido")
+                 )
+            );
+        };
+
         // --- PANTALLAS ---
         const LoginScreen = () => {
             const [isSignUp, setIsSignUp] = useState(false);
@@ -946,7 +1003,22 @@
 
         const HomeView = ({ rates, transactions, onUpdateRate, onOpenAdd, user, onOpenProfile }) => {
             const [showRatesModal, setShowRatesModal] = useState(false);
+            const [showHelpModal, setShowHelpModal] = useState(false);
             const [currentDate, setCurrentDate] = useState(new Date());
+
+            useEffect(() => {
+                const hasSeenIntro = localStorage.getItem('sencillo_intro_seen');
+                if (!hasSeenIntro) {
+                    setShowHelpModal(true);
+                }
+            }, []);
+
+            const handleCloseHelp = (dontShowAgain) => {
+                if (dontShowAgain) {
+                    localStorage.setItem('sencillo_intro_seen', 'true');
+                }
+                setShowHelpModal(false);
+            };
 
             const prevMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() - 1); setCurrentDate(newDate); };
             const nextMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + 1); setCurrentDate(newDate); };
@@ -977,7 +1049,10 @@
             return React.createElement('div', { className: "px-6 pb-32 space-y-6 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
                 React.createElement('header', { className: "flex justify-between items-center" }, 
                     React.createElement('h1', { className: "text-2xl font-black text-white tracking-tight" }, username),
-                    React.createElement('button', { onClick: onOpenProfile, className: "w-12 h-12 rounded-full bg-dark-card border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors shadow-lg" }, React.createElement(User, { size: 24 }))
+                    React.createElement('div', { className: "flex items-center gap-4" },
+                        React.createElement('button', { onClick: () => setShowHelpModal(true), className: "w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors bg-white/5 active:scale-90" }, React.createElement(HelpCircle, { size: 22 })),
+                        React.createElement('button', { onClick: onOpenProfile, className: "w-12 h-12 rounded-full bg-dark-card border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors shadow-lg" }, React.createElement(User, { size: 24 }))
+                    )
                 ),
                 
                 React.createElement('div', { className: "relative w-full h-auto rounded-[2.5rem] p-8 overflow-hidden group shadow-neon transition-all" },
@@ -1021,7 +1096,8 @@
                         React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ahorro.toLocaleString()}`)
                     )
                 ),
-                showRatesModal && React.createElement(RatesModal, { onClose: () => setShowRatesModal(false), rates, onUpdateRate })
+                showRatesModal && React.createElement(RatesModal, { onClose: () => setShowRatesModal(false), rates, onUpdateRate }),
+                showHelpModal && React.createElement(IntroModal, { onClose: handleCloseHelp })
             );
         };
 
