@@ -1109,7 +1109,7 @@
                             // GASTOS FIJOS
                             React.createElement(React.Fragment, { key: 'gastos_fijos' }, 
                                 React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-group-header" }, SEGMENTS['gastos_fijos'].label.toUpperCase()), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-group-header" }))), 
-                                Object.entries(reportData['gastos_fijos'].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), 
+                                Object.entries(reportData['gastos_fijos'].concepts).map(([concept, values]) => React.createElement('tr', { key: concept }, React.createElement('td', { className: "pnl-cell pnl-col-sticky text-gray-400 pl-4" }, concept), periods.map(p => React.createElement('td', { key: p.id, className: "p-4 text-right text-gray-300 border-b border-white/5" }, values[p.id] === 0 ? '-' : Math.round(values[p.id]).toLocaleString())))), 
                                 React.createElement('tr', null, React.createElement('td', { className: "pnl-cell pnl-col-sticky pnl-row-total text-white" }, `Total ${SEGMENTS['gastos_fijos'].label}`), periods.map(p => React.createElement('td', { key: p.id, className: "pnl-cell pnl-row-total" }, Math.round(reportData['gastos_fijos'].total[p.id]).toLocaleString())))
                             ),
 
