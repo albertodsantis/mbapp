@@ -222,38 +222,37 @@
             { id: 'biannual', label: 'Semestral (c/6 meses)' }
         ];
 
-        // ACTUALIZADO: Fetch de Euro
+// ACTUALIZADO: Fetch de Euro
         const getRatesFromAPI = async () => {
             try {
-                const [bcvRes, parallelRes, eurRes] = await Promise.all([
-                    fetch('https://ve.dolarapi.com/v1/dolares/oficial').catch(() => null),
-                    fetch('https://ve.dolarapi.com/v1/dolares/paralelo').catch(() => null),
-                    fetch('https://ve.dolarapi.com/v1/monedas/eur').catch(() => null)
+                const [cotizacionesRes, parallelRes] = await Promise.all([
+                    fetch('https://ve.dolarapi.com/v1/cotizaciones').catch(() => null),
+                    fetch('https://ve.dolarapi.com/v1/dolares/paralelo').catch(() => null)
                 ]);
                 
                 const newRates = {};
                 
-                if (bcvRes && bcvRes.ok) { 
-                    const d = await bcvRes.json(); 
-                    if (d.promedio) newRates.bcv = parseFloat(d.promedio); 
+                if (cotizacionesRes && cotizacionesRes.ok) { 
+                    const data = await cotizacionesRes.json();
+                    // El endpoint devuelve un array, buscamos por moneda
+                    const usd = data.find(item => item.moneda === 'USD');
+                    const eur = data.find(item => item.moneda === 'EUR');
+
+                    if (usd && usd.promedio) newRates.bcv = parseFloat(usd.promedio);
+                    if (eur && eur.promedio) newRates.eur = parseFloat(eur.promedio);
                 }
                 
                 if (parallelRes && parallelRes.ok) { 
                     const d = await parallelRes.json(); 
                     if (d.promedio) newRates.parallel = parseFloat(d.promedio); 
                 }
-
-                if (eurRes && eurRes.ok) {
-                     const d = await eurRes.json();
-                     if (d.promedio) newRates.eur = parseFloat(d.promedio);
-                }
                 
                 return newRates;
-            } catch (e) { return null; }
+            } catch (e) { console.error("Error al obtener tasas:", e); return null; }
         };
         
         const getLocalDateString = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
+        
         // --- UI COMPONENTS ---
         const Button = ({ children, onClick, variant = 'primary', className = '', type="button", disabled = false }) => {
             const variants = {
@@ -1497,3 +1496,4 @@
     </script>
 </body>
 </html>
+
