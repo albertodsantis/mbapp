@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v1.5</title>
+    <title>Sencillo v1.6</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -479,8 +479,6 @@
                     
                     msg && React.createElement('div', { className: `p-3 rounded-xl text-sm font-bold text-center ${msg.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}` }, msg.text),
                     
-                    /* Avatar eliminado para limpiar la vista */
-
                     React.createElement('div', { className: "glass-panel-premium p-6 rounded-[2rem] space-y-5" },
                         React.createElement('div', { className: "space-y-1" },
                              React.createElement('label', { className: "text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-wider" }, "Nombre"),
@@ -629,15 +627,16 @@
                             }, SEGMENTS[seg].label)
                         )
                     ),
-                    React.createElement('div', { className: "glass-panel-premium p-5 rounded-3xl mb-6" },
-                        React.createElement('div', { className: "flex gap-2" },
-                            React.createElement('input', { 
-                                value: newConcept, onChange: (e) => setNewConcept(e.target.value), placeholder: "Nuevo concepto...",
-                                className: "flex-1 p-4 rounded-2xl glass-input text-white focus:outline-none"
-                            }),
-                            React.createElement('button', { onClick: handleAdd, className: "bg-white text-black p-4 rounded-2xl hover:bg-gray-200 transition-colors btn-press" }, React.createElement(Plus, { size: 20 }))
-                        )
+                    
+                    // --- CORRECCIÓN: Eliminado el contenedor glass-panel-premium extra ---
+                    React.createElement('div', { className: "flex gap-2 mb-6" },
+                        React.createElement('input', { 
+                            value: newConcept, onChange: (e) => setNewConcept(e.target.value), placeholder: "Nuevo concepto...",
+                            className: "flex-1 p-4 rounded-2xl glass-input text-white focus:outline-none shadow-sm"
+                        }),
+                        React.createElement('button', { onClick: handleAdd, className: "bg-white text-black p-4 rounded-2xl hover:bg-gray-200 transition-colors btn-press" }, React.createElement(Plus, { size: 20 }))
                     ),
+
                     React.createElement('div', { className: "space-y-3" },
                         (pnlData[activeSegment] || []).map((concept, idx) => 
                             React.createElement('div', { key: idx, className: "flex justify-between items-center p-4 bg-dark-card rounded-2xl border border-gray-800" },
@@ -1093,6 +1092,9 @@
                 const currentMonth = currentDate.getMonth();
                 const currentYear = currentDate.getFullYear();
                 let ingresos = 0, gastos = 0, ahorro = 0, balance = 0;
+                let ahorroBs = 0;
+                let ahorroBsOriginalUSD = 0;
+
                 transactions.forEach(t => {
                     if (!t.date) return;
                     const tDate = new Date(t.date);
@@ -1100,14 +1102,34 @@
                     if (tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
                         const amount = t.amountUSD || 0;
                         if (t.segment === 'ingresos') ingresos += amount;
-                        else if (t.segment === 'ahorro') ahorro += amount;
+                        else if (t.segment === 'ahorro') {
+                            ahorro += amount;
+                            // Calcular ahorros en BS para KPI
+                            if (t.currency === 'VES') {
+                                ahorroBs += t.amount;
+                                ahorroBsOriginalUSD += amount; // monto en USD al momento de la transaccion
+                            }
+                        }
                         else gastos += amount; 
                         if (t.type === 'income') balance += amount;
                         else balance -= amount;
                     }
                 });
-                return { ingresos, gastos, ahorro, balance };
+                return { ingresos, gastos, ahorro, balance, ahorroBs, ahorroBsOriginalUSD };
             }, [transactions, currentDate]);
+
+            // Calculo de devaluacion del ahorro en Bs
+            const devaluationData = useMemo(() => {
+                if (dashboardData.ahorroBs <= 0 || !rates.bcv || rates.bcv === 0) return { percent: 0, currentVal: 0 };
+                const currentValUSD = dashboardData.ahorroBs / rates.bcv;
+                const originalValUSD = dashboardData.ahorroBsOriginalUSD;
+                
+                if (originalValUSD === 0) return { percent: 0, currentVal: currentValUSD };
+                
+                // (ValorActual - ValorOriginal) / ValorOriginal
+                const percent = ((currentValUSD - originalValUSD) / originalValUSD) * 100;
+                return { percent, currentVal: currentValUSD };
+            }, [dashboardData.ahorroBs, dashboardData.ahorroBsOriginalUSD, rates.bcv]);
 
             const username = user?.displayName ? user.displayName.split(' ')[0] : (user.email ? user.email.split('@')[0] : 'Usuario');
 
@@ -1160,11 +1182,21 @@
                         React.createElement('span', { className: "text-[10px] text-gray-500 uppercase font-bold" }, "Gastos"),
                         React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.gastos.toLocaleString()}`)
                     ),
-                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1" },
+                    
+                    // --- KPI AHORRO MEJORADO CON BS ---
+                    React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1 relative overflow-hidden" },
                         React.createElement('div', { className: "p-2 bg-blue-500/10 rounded-full text-blue-400 mb-1" }, React.createElement(PiggyBank, { size: 16 })),
                         React.createElement('span', { className: "text-[10px] text-gray-500 uppercase font-bold" }, "Ahorro"),
-                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ahorro.toLocaleString()}`)
+                        React.createElement('span', { className: "text-sm font-bold text-white" }, `$${dashboardData.ahorro.toLocaleString()}`),
+                        
+                        dashboardData.ahorroBs > 0 && React.createElement('div', { className: "mt-1 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/5" },
+                            React.createElement('span', { className: "text-[9px] font-bold text-gray-400" }, `Bs ${dashboardData.ahorroBs.toLocaleString()}`),
+                            devaluationData.percent !== 0 && React.createElement('span', { className: `text-[9px] font-bold ${devaluationData.percent < 0 ? 'text-red-400' : 'text-emerald-400'}` }, 
+                                `${devaluationData.percent > 0 ? '+' : ''}${devaluationData.percent.toFixed(0)}%`
+                            )
+                        )
                     ),
+                    
                     // Nuevo KPI: RESULTADO NETO
                     React.createElement('div', { className: "glass-panel-premium p-4 rounded-2xl flex flex-col items-center justify-center gap-1" },
                         React.createElement('div', { className: `p-2 rounded-full mb-1 ${dashboardData.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}` }, 
@@ -1498,10 +1530,10 @@
                         React.createElement('button', { onClick: () => setCurrentTab('home'), className: `p-2 ${currentTab === 'home' ? 'text-brand' : 'text-gray-500'}` }, React.createElement(Home, { size: 24, strokeWidth: currentTab === 'home' ? 3 : 2 })),
                         React.createElement('button', { onClick: () => setCurrentTab('budget'), className: `p-2 ${currentTab === 'budget' ? 'text-brand' : 'text-gray-500'}` }, React.createElement(PieChart, { size: 24, strokeWidth: currentTab === 'budget' ? 3 : 2 })),
 
-                        // Center Add Button
+                        // --- CORRECCIÓN: Botón sin borde blanco ---
                         React.createElement('button', {
                             onClick: () => setShowTransactionModal(true),
-                            className: "w-14 h-14 bg-brand rounded-full flex items-center justify-center text-black fab-shadow border-4 border-app-bg -mt-8 mb-1 transition-transform active:scale-90"
+                            className: "w-14 h-14 bg-brand rounded-full flex items-center justify-center text-black fab-shadow -mt-8 mb-1 transition-transform active:scale-90"
                         }, React.createElement(Plus, { size: 32, strokeWidth: 3 })),
 
                         React.createElement('button', { onClick: () => setCurrentTab('history'), className: `p-2 ${currentTab === 'history' ? 'text-brand' : 'text-gray-500'}` }, React.createElement(History, { size: 24, strokeWidth: currentTab === 'history' ? 3 : 2 })),
