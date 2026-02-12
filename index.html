@@ -1163,7 +1163,7 @@
             );
         };
 
-        const HomeView = ({ rates, transactions, onUpdateRate, user, onOpenProfile, onOpenReport }) => {
+        const HomeView = ({ rates, transactions, onUpdateRate, user, onOpenProfile, onOpenReport, onNavigateToHistory }) => {
             const [showRatesModal, setShowRatesModal] = useState(false);
             const [showHelpModal, setShowHelpModal] = useState(false);
             const [currentDate, setCurrentDate] = useState(new Date());
@@ -1201,8 +1201,15 @@
             const dashboardData = useMemo(() => {
                 const selectedMonth = currentDate.getMonth();
                 const selectedYear = currentDate.getFullYear();
+                
                 let ingresos = 0, gastos = 0, ahorro = 0, balance = 0;
-                let ahorroBs = 0;
+                
+                // Nuevos acumuladores para desglose
+                let ingresosVES = 0, ingresosHard = 0; // Hard = USD + EUR (en valor USD)
+                let gastosVES = 0, gastosHard = 0;
+                let ahorroVES = 0, ahorroHard = 0;
+                let balanceVES = 0, balanceHard = 0; // Aproximado
+
                 let ahorroBsOriginalUSD = 0;
 
                 transactions.forEach(t => {
@@ -1225,38 +1232,78 @@
                     }
 
                     if (includeTransaction) {
-                        const amount = t.amountUSD || 0;
-                        if (t.segment === 'ingresos') ingresos += amount;
+                        const amountUSD = t.amountUSD || 0;
+                        const isVES = t.currency === 'VES';
+                        const amountRaw = t.amount || 0;
+
+                        if (t.segment === 'ingresos') {
+                            ingresos += amountUSD;
+                            if (isVES) ingresosVES += amountRaw;
+                            else ingresosHard += amountUSD;
+                        }
                         else if (t.segment === 'ahorro') {
-                            ahorro += amount;
-                            // Calcular ahorros en BS para KPI
-                            if (t.currency === 'VES') {
-                                ahorroBs += t.amount;
-                                ahorroBsOriginalUSD += amount; // monto en USD al momento de la transaccion
+                            ahorro += amountUSD;
+                            if (isVES) {
+                                ahorroVES += amountRaw;
+                                ahorroBsOriginalUSD += amountUSD;
+                            } else {
+                                ahorroHard += amountUSD;
                             }
                         }
-                        else gastos += amount; 
-                        if (t.type === 'income') balance += amount;
-                        else balance -= amount;
+                        else { // Gastos (fijos y variables)
+                            gastos += amountUSD;
+                            if (isVES) gastosVES += amountRaw;
+                            else gastosHard += amountUSD;
+                        } 
+                        
+                        // Balance
+                        if (t.type === 'income') balance += amountUSD;
+                        else balance -= amountUSD;
                     }
                 });
-                return { ingresos, gastos, ahorro, balance, ahorroBs, ahorroBsOriginalUSD };
+                return { 
+                    ingresos, gastos, ahorro, balance, 
+                    ingresosVES, ingresosHard,
+                    gastosVES, gastosHard,
+                    ahorroVES, ahorroHard,
+                    ahorroBsOriginalUSD 
+                };
             }, [transactions, currentDate, viewMode]);
 
-            // Calculo de devaluacion del ahorro en Bs
+            // Calculo de devaluacion del ahorro en Bs (Global)
             const devaluationData = useMemo(() => {
-                if (dashboardData.ahorroBs <= 0 || !rates.bcv || rates.bcv === 0) return { percent: 0, currentVal: 0 };
-                const currentValUSD = dashboardData.ahorroBs / rates.bcv;
+                if (dashboardData.ahorroVES <= 0 || !rates.bcv || rates.bcv === 0) return { percent: 0, currentVal: 0 };
+                const currentValUSD = dashboardData.ahorroVES / rates.bcv;
                 const originalValUSD = dashboardData.ahorroBsOriginalUSD;
-                
                 if (originalValUSD === 0) return { percent: 0, currentVal: currentValUSD };
-                
-                // (ValorActual - ValorOriginal) / ValorOriginal
                 const percent = ((currentValUSD - originalValUSD) / originalValUSD) * 100;
                 return { percent, currentVal: currentValUSD };
-            }, [dashboardData.ahorroBs, dashboardData.ahorroBsOriginalUSD, rates.bcv]);
+            }, [dashboardData.ahorroVES, dashboardData.ahorroBsOriginalUSD, rates.bcv]);
 
             const username = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
+
+            const renderKPI = (title, totalUSD, totalVES, totalHard, icon, colorClass, iconColorClass, onClickFilter, showDeval = false) => {
+                return React.createElement('div', { 
+                    onClick: () => onNavigateToHistory(onClickFilter),
+                    className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2 cursor-pointer hover:bg-white/5 transition-colors active:scale-95 group relative overflow-hidden" 
+                },
+                    React.createElement('div', { className: "flex items-center gap-2 relative z-10" },
+                        React.createElement('div', { className: `p-1.5 rounded-md ${iconColorClass}` }, icon),
+                        React.createElement('span', { className: "text-[10px] text-gray-400 uppercase font-bold tracking-wider" }, title)
+                    ),
+                    React.createElement('div', { className: "pl-1 relative z-10" },
+                        React.createElement('span', { className: `text-lg font-bold block ${colorClass}` }, `$${totalUSD.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`),
+                        
+                        (totalVES > 0) && React.createElement('div', { className: "mt-1 flex flex-wrap gap-1 items-center" },
+                            React.createElement('span', { className: "text-[9px] font-bold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded" }, `$${totalHard.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}`),
+                            React.createElement('span', { className: "text-[9px] font-bold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded" }, `Bs ${totalVES.toLocaleString(undefined, {compactDisplay: "short", notation: "compact"})}`),
+                            showDeval && devaluationData.percent !== 0 && React.createElement('span', { className: `text-[9px] font-bold px-1.5 py-0.5 rounded ${devaluationData.percent < 0 ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}` }, 
+                                `${devaluationData.percent > 0 ? '+' : ''}${devaluationData.percent.toFixed(0)}%`
+                            )
+                        )
+                    )
+                );
+            };
 
             return React.createElement('div', { className: "px-6 pb-32 space-y-4 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } },
                 React.createElement('header', { className: "flex justify-between items-center mb-1" }, 
@@ -1322,51 +1369,29 @@
                     )
                 ),
                 
-                // KPI GRID - AHORA CON ESTILO 'DATACARD' (NO BOTON)
+                // KPI GRID - AHORA INTERACTIVO Y CON DESGLOSE
                 React.createElement('div', { className: "grid grid-cols-2 gap-3" },
                     // Ingresos
-                    React.createElement('div', { className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2" },
-                        React.createElement('div', { className: "flex items-center gap-2" },
-                            React.createElement('div', { className: "p-1.5 bg-emerald-500/10 rounded-md text-emerald-400" }, React.createElement(TrendingUp, { size: 14 })),
-                            React.createElement('span', { className: "text-[10px] text-gray-400 uppercase font-bold tracking-wider" }, "Ingresos")
-                        ),
-                        React.createElement('span', { className: "text-lg font-bold text-white pl-1" }, `$${dashboardData.ingresos.toLocaleString()}`)
-                    ),
+                    renderKPI("Ingresos", dashboardData.ingresos, dashboardData.ingresosVES, dashboardData.ingresosHard, React.createElement(TrendingUp, { size: 14 }), "text-white", "bg-emerald-500/10 text-emerald-400", "ingresos"),
+                    
                     // Gastos
-                    React.createElement('div', { className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2" },
-                        React.createElement('div', { className: "flex items-center gap-2" },
-                            React.createElement('div', { className: "p-1.5 bg-rose-500/10 rounded-md text-rose-400" }, React.createElement(TrendingDown, { size: 14 })),
-                            React.createElement('span', { className: "text-[10px] text-gray-400 uppercase font-bold tracking-wider" }, "Gastos")
-                        ),
-                        React.createElement('span', { className: "text-lg font-bold text-white pl-1" }, `$${dashboardData.gastos.toLocaleString()}`)
-                    ),
+                    renderKPI("Gastos", dashboardData.gastos, dashboardData.gastosVES, dashboardData.gastosHard, React.createElement(TrendingDown, { size: 14 }), "text-white", "bg-rose-500/10 text-rose-400", "gastos"),
                     
                     // Ahorro
-                    React.createElement('div', { className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden" },
-                        React.createElement('div', { className: "flex items-center gap-2" },
-                            React.createElement('div', { className: "p-1.5 bg-blue-500/10 rounded-md text-blue-400" }, React.createElement(PiggyBank, { size: 14 })),
-                            React.createElement('span', { className: "text-[10px] text-gray-400 uppercase font-bold tracking-wider" }, "Ahorro")
-                        ),
-                        React.createElement('div', { className: "pl-1" },
-                            React.createElement('span', { className: "text-lg font-bold text-white block" }, `$${dashboardData.ahorro.toLocaleString()}`),
-                            dashboardData.ahorroBs > 0 && React.createElement('div', { className: "mt-1 flex items-center gap-1" },
-                                React.createElement('span', { className: "text-[9px] font-medium text-gray-500" }, `Bs ${dashboardData.ahorroBs.toLocaleString()}`),
-                                devaluationData.percent !== 0 && React.createElement('span', { className: `text-[9px] font-bold ${devaluationData.percent < 0 ? 'text-red-400' : 'text-emerald-400'}` }, 
-                                    `${devaluationData.percent > 0 ? '+' : ''}${devaluationData.percent.toFixed(0)}%`
-                                )
-                            )
-                        )
-                    ),
+                    renderKPI("Ahorro", dashboardData.ahorro, dashboardData.ahorroVES, dashboardData.ahorroHard, React.createElement(PiggyBank, { size: 14 }), "text-white", "bg-blue-500/10 text-blue-400", "ahorro", true),
                     
                     // Resultado
-                    React.createElement('div', { className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2" },
+                    React.createElement('div', { 
+                        onClick: () => onNavigateToHistory("all"),
+                        className: "bg-dark-surface border border-white/5 p-4 rounded-xl flex flex-col gap-2 cursor-pointer hover:bg-white/5 transition-colors active:scale-95" 
+                    },
                         React.createElement('div', { className: "flex items-center gap-2" },
                             React.createElement('div', { className: `p-1.5 rounded-md ${dashboardData.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}` }, 
                                 dashboardData.balance >= 0 ? React.createElement(Check, { size: 14 }) : React.createElement(AlertTriangle, { size: 14 })
                             ),
                             React.createElement('span', { className: "text-[10px] text-gray-400 uppercase font-bold tracking-wider" }, "Resultado")
                         ),
-                        React.createElement('span', { className: `text-lg font-bold pl-1 ${dashboardData.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}` }, `$${dashboardData.balance.toLocaleString()}`)
+                        React.createElement('span', { className: `text-lg font-bold pl-1 ${dashboardData.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}` }, `$${dashboardData.balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`)
                     ),
                 ),
 
@@ -1394,15 +1419,28 @@
             );
         };
 
-        const HistoryView = ({ transactions, onEditTransaction, rates }) => {
+        const HistoryView = ({ transactions, onEditTransaction, rates, initialFilter = "all" }) => {
              const [currentDate, setCurrentDate] = useState(new Date());
-             const [selectedCategory, setSelectedCategory] = useState("all");
+             const [selectedSegment, setSelectedSegment] = useState(initialFilter); // Filter by Type (All, Income, Expense, Savings)
+             const [selectedCategory, setSelectedCategory] = useState("all"); // Filter by Category within type
              
-             // Extraer categorías únicas de las transacciones
+             // Update segment when initialFilter changes from parent navigation
+             useEffect(() => {
+                 setSelectedSegment(initialFilter);
+                 setSelectedCategory("all"); // Reset category on segment change
+             }, [initialFilter]);
+
              const uniqueCategories = useMemo(() => {
-                 const cats = new Set(transactions.map(t => t.category));
+                 // Filter categories based on selected segment first
+                 const filtered = transactions.filter(t => {
+                     if (selectedSegment === "ingresos") return t.segment === "ingresos";
+                     if (selectedSegment === "ahorro") return t.segment === "ahorro";
+                     if (selectedSegment === "gastos") return t.segment === "gastos_fijos" || t.segment === "gastos_variables";
+                     return true;
+                 });
+                 const cats = new Set(filtered.map(t => t.category));
                  return Array.from(cats).sort();
-             }, [transactions]);
+             }, [transactions, selectedSegment]);
 
              const filteredTransactions = useMemo(() => {
                  return transactions.filter(t => {
@@ -1412,19 +1450,25 @@
                      const matchDate = tDate.getMonth() === currentDate.getMonth() && tDate.getFullYear() === currentDate.getFullYear();
                      if (!matchDate) return false;
                      
+                     // Segment Filter
+                     if (selectedSegment === "ingresos" && t.segment !== "ingresos") return false;
+                     if (selectedSegment === "ahorro" && t.segment !== "ahorro") return false;
+                     if (selectedSegment === "gastos" && t.segment !== "gastos_fijos" && t.segment !== "gastos_variables") return false;
+
+                     // Category Filter
                      if (selectedCategory !== "all") {
                          return t.category === selectedCategory;
                      }
                      return true;
                  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-             }, [transactions, currentDate, selectedCategory]);
+             }, [transactions, currentDate, selectedCategory, selectedSegment]);
 
              const prevMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() - 1); setCurrentDate(newDate); };
              const nextMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + 1); setCurrentDate(newDate); };
              const monthLabel = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
              const capitalizeFirst = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
-             return React.createElement('div', { className: "px-6 pb-32 space-y-6 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } }, 
+             return React.createElement('div', { className: "px-6 pb-32 space-y-4 animate-fade-in", style: { paddingTop: "calc(env(safe-area-inset-top) + 24px)" } }, 
                 React.createElement('div', { className: "flex justify-between items-center" },
                     React.createElement('h2', { className: "text-2xl font-black text-white tracking-tight" }, "Movimientos"),
                     React.createElement('div', { className: "flex items-center gap-1 bg-dark-card p-1.5 rounded-xl border border-white/10 shadow-inner-light" },
@@ -1434,7 +1478,18 @@
                     )
                 ),
                 
-                // --- FILTRO DE CATEGORÍAS ---
+                // --- SEGMENT FILTER (TABS) ---
+                React.createElement('div', { className: "flex p-1 bg-dark-surface rounded-xl border border-white/5 overflow-x-auto no-scrollbar" },
+                    [{id: 'all', l: 'Todos'}, {id: 'ingresos', l: 'Ingresos'}, {id: 'gastos', l: 'Gastos'}, {id: 'ahorro', l: 'Ahorro'}].map(opt => 
+                        React.createElement('button', { 
+                            key: opt.id,
+                            onClick: () => { setSelectedSegment(opt.id); setSelectedCategory("all"); },
+                            className: `flex-1 py-2 px-3 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${selectedSegment === opt.id ? 'bg-white text-black shadow-md' : 'text-gray-500 hover:text-white'}`
+                        }, opt.l)
+                    )
+                ),
+
+                // --- FILTRO DE CATEGORÍAS (Contextual) ---
                 React.createElement('div', { className: "relative" },
                     React.createElement('span', { className: "absolute left-4 top-3.5 text-gray-400 pointer-events-none" }, React.createElement(Filter, { size: 18 })),
                     React.createElement('select', {
@@ -1649,6 +1704,7 @@
             const [showTransactionModal, setShowTransactionModal] = useState(false);
             const [currentTab, setCurrentTab] = useState('home');
             const [editingTransaction, setEditingTransaction] = useState(null);
+            const [historyFilter, setHistoryFilter] = useState('all');
 
             useEffect(() => { 
                 const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -1679,6 +1735,11 @@
             const updateBudgets = async (b) => { if(!user) return; await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'budgets'), b); };
             const handleEditTransaction = (tx) => { setEditingTransaction(tx); setShowTransactionModal(true); };
             const handleCloseModal = () => { setShowTransactionModal(false); setEditingTransaction(null); };
+            
+            const handleNavigateToHistory = (filterType) => {
+                setHistoryFilter(filterType);
+                setCurrentTab('history');
+            };
 
             if (authLoading) {
                 return React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col items-center justify-center animate-fade-in" },
@@ -1694,8 +1755,8 @@
             return React.createElement(ErrorBoundary, null, 
                 React.createElement('div', { className: "h-screen w-full bg-app-bg flex flex-col text-white" },
                     React.createElement('div', { className: "flex-1 overflow-y-auto no-scrollbar" },
-                        currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenReport: () => setCurrentTab('report'), onEditTransaction: handleEditTransaction, user, onOpenProfile: () => setCurrentTab('profile') }) :
-                        currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction, rates }) :
+                        currentTab === 'home' ? React.createElement(HomeView, { rates, transactions, onUpdateRate: updateRates, onOpenReport: () => setCurrentTab('report'), onEditTransaction: handleEditTransaction, user, onOpenProfile: () => setCurrentTab('profile'), onNavigateToHistory: handleNavigateToHistory }) :
+                        currentTab === 'history' ? React.createElement(HistoryView, { transactions, onEditTransaction: handleEditTransaction, rates, initialFilter: historyFilter }) :
                         currentTab === 'report' ? React.createElement(PnLReportView, { transactions, pnlStructure, rates }) : 
                         currentTab === 'budget' ? React.createElement(BudgetView, { pnlStructure, budgets, onUpdateBudgets: updateBudgets, transactions }) :
                         currentTab === 'config' ? React.createElement(ConfigView, { pnlData: pnlStructure, onUpdatePnl: updatePnl, userId: user.uid }) :
