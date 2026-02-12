@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sencillo v1.7</title>
+    <title>Sencillo v1.8</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -160,7 +160,7 @@
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
             LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
-            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database, Terminal, Receipt, CreditCard, Info, Maximize2, Minimize2, ZoomIn, ZoomOut, MapPin, Phone, HelpCircle, AlertTriangle, Euro, FileText, BarChart3, CalendarRange
+            Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database, Terminal, Receipt, CreditCard, Info, Maximize2, Minimize2, ZoomIn, ZoomOut, MapPin, Phone, HelpCircle, AlertTriangle, Euro, FileText, BarChart3, CalendarRange, Globe
         } from 'lucide-react';
 
         // --- FIREBASE SETUP ---
@@ -226,27 +226,57 @@
             { id: 'biannual', label: 'Semestral (c/6 meses)' }
         ];
 
+        // --- FUNCION DE TASAS ACTUALIZADA ---
         const getRatesFromAPI = async () => {
             try {
-                const [cotizacionesRes, parallelRes] = await Promise.all([
+                // Obtenemos tasas de Venezuela y tasa global EUR/USD
+                const [cotizacionesRes, parallelRes, globalRes] = await Promise.all([
                     fetch('https://ve.dolarapi.com/v1/cotizaciones').catch(() => null),
-                    fetch('https://ve.dolarapi.com/v1/dolares/paralelo').catch(() => null)
+                    fetch('https://ve.dolarapi.com/v1/dolares/paralelo').catch(() => null),
+                    fetch('https://open.er-api.com/v6/latest/USD').catch(() => null)
                 ]);
                 
-                const newRates = {};
+                const newRates = { bcv: 0, parallel: 0, eur: 0, eurCross: 0 };
+                let bcvRate = 0;
                 
+                // 1. Dólar BCV
                 if (cotizacionesRes && cotizacionesRes.ok) { 
                     const data = await cotizacionesRes.json();
                     const usd = data.find(item => item.moneda === 'USD');
-                    const eur = data.find(item => item.moneda === 'EUR');
-
-                    if (usd && usd.promedio) newRates.bcv = parseFloat(usd.promedio);
-                    if (eur && eur.promedio) newRates.eur = parseFloat(eur.promedio);
+                    if (usd && usd.promedio) {
+                        bcvRate = parseFloat(usd.promedio);
+                        newRates.bcv = bcvRate;
+                    }
                 }
                 
+                // 2. Dólar Paralelo
                 if (parallelRes && parallelRes.ok) { 
                     const d = await parallelRes.json(); 
                     if (d.promedio) newRates.parallel = parseFloat(d.promedio); 
+                }
+                
+                // 3. Euro BCV (Calculado: BCV Dolar * (1 EUR en USD))
+                // La API open.er-api devuelve "EUR": 0.9X (lo que significa 1 USD = 0.9X EUR)
+                // Nosotros queremos 1 EUR = X USD. Por tanto: 1 / rates.EUR
+                if (bcvRate > 0 && globalRes && globalRes.ok) {
+                    const globalData = await globalRes.json();
+                    const usdToEur = globalData.rates.EUR; // 1 USD = X EUR
+                    
+                    if (usdToEur) {
+                        const eurToUsd = 1 / usdToEur; // 1 EUR = Y USD
+                        // Euro en Bolivares = BCV (Bs/$) * (USD/€)
+                        const bcvEur = bcvRate * eurToUsd;
+                        
+                        newRates.eur = parseFloat(bcvEur.toFixed(4));
+                        newRates.eurCross = parseFloat(eurToUsd.toFixed(4)); // Guardamos el factor para mostrarlo
+                    }
+                } else if (bcvRate > 0) {
+                     // Fallback si falla la API global: usar el Euro que reporta DolarAPI (si existe)
+                     if (cotizacionesRes && cotizacionesRes.ok) {
+                         const data = await cotizacionesRes.json();
+                         const eur = data.find(item => item.moneda === 'EUR');
+                         if (eur && eur.promedio) newRates.eur = parseFloat(eur.promedio);
+                     }
                 }
                 
                 return newRates;
@@ -807,54 +837,73 @@
             );
         };
 
+        // --- NUEVA MODAL DE TASAS (ESTILO INFO) ---
         const RatesModal = ({ onClose, rates, onUpdateRate }) => {
-            const [tempRates, setTempRates] = useState(rates);
             const [isRefreshing, setIsRefreshing] = useState(false);
-            useEffect(() => setTempRates(rates), [rates]);
-            const handleSave = () => { onUpdateRate(tempRates); onClose(); };
             const today = new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'numeric' });
             
-            const gap = useMemo(() => { if (!tempRates.bcv || !tempRates.parallel) return 0; return ((tempRates.parallel - tempRates.bcv) / tempRates.bcv) * 100; }, [tempRates]);
+            const gap = useMemo(() => { if (!rates.bcv || !rates.parallel) return 0; return ((rates.parallel - rates.bcv) / rates.bcv) * 100; }, [rates]);
 
             const fetchLiveRates = async () => {
                 setIsRefreshing(true);
                 const newRates = await getRatesFromAPI();
                 if (newRates) {
-                    setTempRates(prev => ({...prev, ...newRates}));
+                    onUpdateRate(newRates);
                 }
-                setIsRefreshing(false);
+                setTimeout(() => setIsRefreshing(false), 500);
             };
 
-            return React.createElement('div', { className: "fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center animate-fade-in" },
-                React.createElement('div', { className: "w-full max-w-sm p-6 rounded-[2rem] mx-4 animate-slide-up border border-white/20 bg-card-gradient shadow-neon" },
+            return React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 animate-fade-in" },
+                React.createElement('div', { className: "bg-dark-card p-6 rounded-[2rem] border border-white/10 max-w-sm w-full animate-bounce-in shadow-glass" },
+                    
                     React.createElement('div', { className: "flex justify-between items-center mb-6" }, 
                         React.createElement('div', { className: "flex items-baseline gap-2" },
                             React.createElement('h3', { className: "text-xl font-bold text-white tracking-tight" }, "Tasas del Día"),
-                            React.createElement('span', { className: "text-sm text-emerald-100/70" }, today)
+                            React.createElement('span', { className: "text-sm text-gray-500 font-medium" }, today)
                         ),
-                        React.createElement('button', { onClick: onClose, className: "p-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-colors" }, React.createElement(X, { size: 20 }))
+                        React.createElement('button', { onClick: onClose, className: "p-2 bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors" }, React.createElement(X, { size: 20 }))
                     ),
-                    React.createElement('div', { className: "space-y-4 mb-6" },
-                         React.createElement('div', { className: "p-4 bg-black/20 rounded-2xl border border-white/10" },
-                           React.createElement('label', { className: "text-xs text-emerald-100/70 font-bold block mb-2 tracking-wider" }, "BCV"),
-                           React.createElement('input', { type: "number", value: tempRates.bcv, onChange: e => setTempRates({...tempRates, bcv: e.target.value}), className: "w-full bg-transparent text-3xl font-black text-white focus:outline-none" })
+                    
+                    React.createElement('div', { className: "space-y-3 mb-6" },
+                         // BCV Card
+                         React.createElement('div', { className: "p-4 bg-dark-surface rounded-2xl border border-white/5 flex justify-between items-center" },
+                           React.createElement('div', { className: "flex flex-col" },
+                                React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1" }, "BCV OFICIAL"),
+                                React.createElement('span', { className: "text-2xl font-black text-white" }, rates.bcv?.toFixed(2))
+                           ),
+                           React.createElement('div', { className: "w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400" }, React.createElement(Check, { size: 20 }))
                          ),
-                         React.createElement('div', { className: "p-4 bg-black/20 rounded-2xl border border-white/10" },
-                           React.createElement('label', { className: "text-xs text-emerald-100/70 font-bold block mb-2 tracking-wider" }, "USDC (PARALELO)"),
-                           React.createElement('input', { type: "number", value: tempRates.parallel, onChange: e => setTempRates({...tempRates, parallel: e.target.value}), className: "w-full bg-transparent text-3xl font-black text-white focus:outline-none" })
+                         
+                         // Parallel Card
+                         React.createElement('div', { className: "p-4 bg-dark-surface rounded-2xl border border-white/5 flex justify-between items-center" },
+                           React.createElement('div', { className: "flex flex-col" },
+                                React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1" }, "DÓLAR USDC"),
+                                React.createElement('span', { className: "text-2xl font-black text-emerald-400" }, rates.parallel?.toFixed(2))
+                           ),
+                           React.createElement('div', { className: "flex flex-col items-end" },
+                                React.createElement('span', { className: "text-[9px] text-gray-500 font-bold uppercase mb-1" }, "BRECHA"),
+                                React.createElement('span', { className: `text-xs font-bold px-2 py-1 rounded-md ${gap > 10 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}` }, `${gap.toFixed(2)}%`)
+                           )
                          ),
-                         React.createElement('div', { className: "p-4 bg-black/20 rounded-2xl border border-white/10" },
-                           React.createElement('label', { className: "text-xs text-emerald-100/70 font-bold block mb-2 tracking-wider" }, "EURO"),
-                           React.createElement('input', { type: "number", value: tempRates.eur || 0, onChange: e => setTempRates({...tempRates, eur: e.target.value}), className: "w-full bg-transparent text-3xl font-black text-white focus:outline-none" })
+                         
+                         // Euro Card
+                         React.createElement('div', { className: "p-4 bg-dark-surface rounded-2xl border border-white/5 flex justify-between items-center" },
+                           React.createElement('div', { className: "flex flex-col" },
+                                React.createElement('span', { className: "text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1" }, "EURO BCV"),
+                                React.createElement('span', { className: "text-2xl font-black text-blue-400" }, rates.eur?.toFixed(2)),
+                                rates.eurCross > 0 && React.createElement('span', { className: "text-[9px] text-gray-600 mt-1 font-mono" }, `1 EUR = ${rates.eurCross.toFixed(4)} USD`)
+                           ),
+                           React.createElement('div', { className: "w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400" }, React.createElement(Euro, { size: 20 }))
                          )
                     ),
-                    React.createElement('div', { className: "flex justify-between items-center mb-6 px-2" },
-                         React.createElement('span', { className: "text-sm text-emerald-100 font-medium" }, "Brecha"),
-                         React.createElement('span', { className: `text-sm font-bold ${gap > 10 ? 'text-white bg-red-500 px-2 rounded' : 'text-white'}` }, `${gap.toFixed(2)}%`)
-                    ),
-                    React.createElement('div', { className: "flex gap-3" },
-                        React.createElement('button', { onClick: fetchLiveRates, className: "p-4 rounded-2xl bg-white/20 border border-white/10 text-white hover:bg-white/30 transition-colors flex items-center justify-center btn-press" }, isRefreshing ? React.createElement(Loader2, { size: 20, className: "animate-spin" }) : React.createElement(RefreshCw, { size: 20 })),
-                        React.createElement('button', { onClick: handleSave, className: "flex-1 px-6 py-4 rounded-2xl font-bold text-emerald-900 bg-white shadow-lg btn-press" }, "Guardar Tasas")
+                    
+                    React.createElement('button', { 
+                        onClick: fetchLiveRates,
+                        disabled: isRefreshing,
+                        className: "w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-gray-200 transition-colors btn-press flex items-center justify-center gap-2"
+                    }, 
+                        isRefreshing ? React.createElement(Loader2, { size: 18, className: "animate-spin" }) : React.createElement(RefreshCw, { size: 18 }),
+                        isRefreshing ? "Actualizando..." : "Actualizar Tasas"
                     )
                 )
             );
@@ -886,10 +935,16 @@
                 if (currency === 'USD') return parseFloat(amount);
                 
                 if (currency === 'EUR') {
+                    // Euro BCV calculado o manual
                     const eurRateInBs = rateType === 'manual' ? customRate : (rates.eur || 0);
                     const usdRateInBs = rates.bcv || 1; 
+                    
                     if (eurRateInBs === 0 || usdRateInBs === 0) return 0;
-                    return (parseFloat(amount) * eurRateInBs) / usdRateInBs;
+                    
+                    // Convertimos Bs (valor de los Euros) a USD usando tasa BCV
+                    // Si tengo 100 EUR, son X Bs. Esos X Bs son Y USD.
+                    const amountInBs = parseFloat(amount) * eurRateInBs;
+                    return amountInBs / usdRateInBs;
                 }
 
                 let rate = rateType === 'bcv' ? rates.bcv : (rateType === 'parallel' ? rates.parallel : customRate);
@@ -1023,8 +1078,8 @@
                         
                         currency === 'VES' && React.createElement('div', { className: "bg-dark-surface/30 p-4 rounded-2xl border border-white/5" },
                             React.createElement('div', { className: "grid grid-cols-3 gap-2" },
-                                React.createElement('button', { type: "button", onClick: () => setRateType('bcv'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'bcv' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "BCV", React.createElement('br'), rates.bcv),
-                                React.createElement('button', { type: "button", onClick: () => setRateType('parallel'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'parallel' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "USDC", React.createElement('br'), rates.parallel),
+                                React.createElement('button', { type: "button", onClick: () => setRateType('bcv'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'bcv' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "BCV", React.createElement('br'), rates.bcv?.toFixed(2)),
+                                React.createElement('button', { type: "button", onClick: () => setRateType('parallel'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'parallel' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "USDC", React.createElement('br'), rates.parallel?.toFixed(2)),
                                 React.createElement('button', { type: "button", onClick: () => setRateType('manual'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'manual' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "Manual")
                             ),
                             rateType === 'manual' && React.createElement('input', { type: "number", value: customRate, onChange: e => setCustomRate(e.target.value), className: "w-full mt-3 p-3 rounded-xl bg-dark-base border border-gray-700 text-center font-bold text-brand-light focus:outline-none", placeholder: "Tasa personalizada" })
@@ -1032,7 +1087,7 @@
 
                         currency === 'EUR' && React.createElement('div', { className: "bg-dark-surface/30 p-4 rounded-2xl border border-white/5" },
                             React.createElement('div', { className: "grid grid-cols-2 gap-2" },
-                                React.createElement('button', { type: "button", onClick: () => { setRateType('eur'); setCustomRate(rates.eur); }, className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType !== 'manual' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "TASA EURO", React.createElement('br'), rates.eur || 0),
+                                React.createElement('button', { type: "button", onClick: () => { setRateType('eur'); setCustomRate(rates.eur); }, className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType !== 'manual' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "TASA EURO BCV", React.createElement('br'), rates.eur?.toFixed(2) || 0),
                                 React.createElement('button', { type: "button", onClick: () => setRateType('manual'), className: `p-2 rounded-xl text-[10px] font-bold border transition-all ${rateType === 'manual' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' : 'bg-transparent text-gray-500 border-gray-700'}` }, "Manual")
                             ),
                             rateType === 'manual' && React.createElement('input', { type: "number", value: customRate, onChange: e => setCustomRate(e.target.value), className: "w-full mt-3 p-3 rounded-xl bg-dark-base border border-gray-700 text-center font-bold text-brand-light focus:outline-none", placeholder: "Tasa Euro personalizada" })
@@ -1193,17 +1248,17 @@
                     React.createElement('div', { className: "flex items-center gap-4 flex-nowrap min-w-max" },
                         React.createElement('div', { className: "flex flex-col" },
                              React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "BCV"),
-                             React.createElement('span', { className: "text-sm font-bold text-white font-mono" }, rates.bcv)
+                             React.createElement('span', { className: "text-sm font-bold text-white font-mono" }, rates.bcv?.toFixed(2))
                         ),
                         React.createElement('div', { className: "w-px h-6 bg-white/10" }),
                         React.createElement('div', { className: "flex flex-col" },
                              React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "USDC"),
-                             React.createElement('span', { className: "text-sm font-bold text-emerald-400 font-mono" }, rates.parallel)
+                             React.createElement('span', { className: "text-sm font-bold text-emerald-400 font-mono" }, rates.parallel?.toFixed(2))
                         ),
                         React.createElement('div', { className: "w-px h-6 bg-white/10" }),
                         React.createElement('div', { className: "flex flex-col" },
                              React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "EUR"),
-                             React.createElement('span', { className: "text-sm font-bold text-blue-400 font-mono" }, rates.eur || 0)
+                             React.createElement('span', { className: "text-sm font-bold text-blue-400 font-mono" }, rates.eur?.toFixed(2) || 0)
                         )
                     ),
                     React.createElement(RefreshCw, { size: 16, className: "text-emerald-500 opacity-80 shrink-0 group-hover:rotate-180 transition-transform duration-500" })
@@ -1520,7 +1575,7 @@
         const App = () => {
             const [user, setUser] = useState(null);
             const [authLoading, setAuthLoading] = useState(true);
-            const [rates, setRates] = useState({ bcv: 0, parallel: 0, eur: 0 });
+            const [rates, setRates] = useState({ bcv: 0, parallel: 0, eur: 0, eurCross: 0 });
             const [transactions, setTransactions] = useState([]);
             const [pnlStructure, setPnlStructure] = useState(DEFAULT_PNL);
             const [budgets, setBudgets] = useState({});
@@ -1552,7 +1607,7 @@
                 return () => { unsubRates(); unsubTrans(); unsubPnl(); unsubBudgets(); };
             }, [user]);
 
-            const updateRates = async (r) => { if(!user) return; await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(r.bcv), parallel: parseFloat(r.parallel), eur: parseFloat(r.eur || 0) }); };
+            const updateRates = async (r) => { if(!user) return; await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'rates'), { bcv: parseFloat(r.bcv), parallel: parseFloat(r.parallel), eur: parseFloat(r.eur || 0), eurCross: parseFloat(r.eurCross || 0) }); };
             const updatePnl = async (p) => { if(!user) return; await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'pnl'), p); };
             const updateBudgets = async (b) => { if(!user) return; await setDoc(doc(db, ROOT_COLLECTION, PROJECT_DOC_ID, 'users', user.uid, 'settings', 'budgets'), b); };
             const handleEditTransaction = (tx) => { setEditingTransaction(tx); setShowTransactionModal(true); };
@@ -1602,4 +1657,3 @@
     </script>
 </body>
 </html>
-
