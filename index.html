@@ -1362,7 +1362,7 @@
                 },
                     React.createElement('div', { className: "flex items-center gap-4 flex-nowrap min-w-max" },
                         React.createElement('div', { className: "flex flex-col" },
-                             React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "BCV"),
+                             React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "BCV $"),
                              React.createElement('span', { className: "text-sm font-bold text-white font-mono" }, rates.bcv?.toFixed(2))
                         ),
                         React.createElement('div', { className: "w-px h-6 bg-white/10" }),
@@ -1372,7 +1372,7 @@
                         ),
                         React.createElement('div', { className: "w-px h-6 bg-white/10" }),
                         React.createElement('div', { className: "flex flex-col" },
-                             React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "EUR"),
+                             React.createElement('span', { className: "text-[10px] font-bold text-emerald-100/50 uppercase tracking-wider" }, "BCV €"),
                              React.createElement('span', { className: "text-sm font-bold text-blue-400 font-mono" }, rates.eur?.toFixed(2) || 0)
                         )
                     ),
@@ -1409,11 +1409,11 @@
                     // Gastos fijos
                     renderKPI("Gastos Fijos", dashboardData.gastosFijos, dashboardData.gastosFijosVES, dashboardData.gastosFijosHard, React.createElement(CreditCard, { size: 14 }), "text-white", "bg-orange-500/10 text-orange-400", "gastos"),
 
-                    // Gastos variables
-                    renderKPI("Gastos Variables", dashboardData.gastosVariables, dashboardData.gastosVariablesVES, dashboardData.gastosVariablesHard, React.createElement(TrendingDown, { size: 14 }), "text-white", "bg-rose-500/10 text-rose-400", "gastos"),
-
                     // Ahorro
-                    renderKPI("Ahorro", dashboardData.ahorro, dashboardData.ahorroVES, dashboardData.ahorroHard, React.createElement(PiggyBank, { size: 14 }), "text-white", "bg-blue-500/10 text-blue-400", "ahorro", true)
+                    renderKPI("Ahorro", dashboardData.ahorro, dashboardData.ahorroVES, dashboardData.ahorroHard, React.createElement(PiggyBank, { size: 14 }), "text-white", "bg-blue-500/10 text-blue-400", "ahorro", true),
+
+                    // Gastos variables
+                    renderKPI("Gastos Variables", dashboardData.gastosVariables, dashboardData.gastosVariablesVES, dashboardData.gastosVariablesHard, React.createElement(TrendingDown, { size: 14 }), "text-white", "bg-rose-500/10 text-rose-400", "gastos")
                 ),
 
                 // NOTA: Se eliminó el botón de "Reportes Detallados" separado para limpiar la UI y dar espacio a futuras métricas.
