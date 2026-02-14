@@ -166,7 +166,7 @@
         import { 
             Wallet, TrendingUp, TrendingDown, Plus, Settings, 
             Calendar, DollarSign, RefreshCw, X, Save, ArrowRightLeft,
-            LogOut, ChevronDown, Filter, Home, History, PieChart, Trash2, List, FileSpreadsheet,
+            LogOut, ChevronDown, Home, History, PieChart, Trash2, List, FileSpreadsheet,
             Users, User, Check, Repeat, Pencil, Loader2, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, PiggyBank, Mail, Lock, Search, AlertCircle, ShieldCheck, Bug, Database, Terminal, Receipt, CreditCard, Info, Maximize2, Minimize2, ZoomIn, ZoomOut, MapPin, Phone, HelpCircle, AlertTriangle, Euro, FileText, BarChart3, CalendarRange, Globe, AlertOctagon,
             ArrowRight
         } from 'lucide-react';
@@ -1427,25 +1427,11 @@
         const HistoryView = ({ transactions, onEditTransaction, rates, initialFilter = "all" }) => {
              const [currentDate, setCurrentDate] = useState(new Date());
              const [selectedSegment, setSelectedSegment] = useState(initialFilter); // Filter by Type (All, Income, Expense, Savings)
-             const [selectedCategory, setSelectedCategory] = useState("all"); // Filter by Category within type
              
              // Update segment when initialFilter changes from parent navigation
              useEffect(() => {
                  setSelectedSegment(initialFilter);
-                 setSelectedCategory("all"); // Reset category on segment change
              }, [initialFilter]);
-
-             const uniqueCategories = useMemo(() => {
-                 // Filter categories based on selected segment first
-                 const filtered = transactions.filter(t => {
-                     if (selectedSegment === "ingresos") return t.segment === "ingresos";
-                     if (selectedSegment === "ahorro") return t.segment === "ahorro";
-                     if (selectedSegment === "gastos") return t.segment === "gastos_fijos" || t.segment === "gastos_variables";
-                     return true;
-                 });
-                 const cats = new Set(filtered.map(t => t.category));
-                 return Array.from(cats).sort();
-             }, [transactions, selectedSegment]);
 
              const filteredTransactions = useMemo(() => {
                  return transactions.filter(t => {
@@ -1460,13 +1446,9 @@
                      if (selectedSegment === "ahorro" && t.segment !== "ahorro") return false;
                      if (selectedSegment === "gastos" && t.segment !== "gastos_fijos" && t.segment !== "gastos_variables") return false;
 
-                     // Category Filter
-                     if (selectedCategory !== "all") {
-                         return t.category === selectedCategory;
-                     }
                      return true;
                  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-             }, [transactions, currentDate, selectedCategory, selectedSegment]);
+             }, [transactions, currentDate, selectedSegment]);
 
              const prevMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() - 1); setCurrentDate(newDate); };
              const nextMonth = () => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + 1); setCurrentDate(newDate); };
@@ -1488,25 +1470,12 @@
                     [{id: 'all', l: 'Todos'}, {id: 'ingresos', l: 'Ingresos'}, {id: 'gastos', l: 'Gastos'}, {id: 'ahorro', l: 'Ahorro'}].map(opt => 
                         React.createElement('button', { 
                             key: opt.id,
-                            onClick: () => { setSelectedSegment(opt.id); setSelectedCategory("all"); },
+                            onClick: () => setSelectedSegment(opt.id),
                             className: `flex-1 py-2 px-3 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${selectedSegment === opt.id ? 'bg-white text-black shadow-md' : 'text-gray-500 hover:text-white'}`
                         }, opt.l)
                     )
                 ),
 
-                // --- FILTRO DE CATEGORÍAS (Contextual) ---
-                React.createElement('div', { className: "relative" },
-                    React.createElement('span', { className: "absolute left-4 top-3.5 text-gray-400 pointer-events-none" }, React.createElement(Filter, { size: 18 })),
-                    React.createElement('select', {
-                        value: selectedCategory, 
-                        onChange: (e) => setSelectedCategory(e.target.value),
-                        className: "w-full pl-11 pr-10 py-3 bg-dark-surface/50 border border-white/5 rounded-2xl text-white outline-none focus:border-brand/50 transition-colors backdrop-blur-md appearance-none font-medium text-sm"
-                    },
-                        React.createElement('option', { value: "all" }, "Todas las categorías"),
-                        uniqueCategories.map(cat => React.createElement('option', { key: cat, value: cat }, cat))
-                    ),
-                    React.createElement(ChevronDown, { size: 16, className: "absolute right-4 top-4 text-gray-500 pointer-events-none" })
-                ),
 
                 filteredTransactions.length === 0 ? 
                     React.createElement('div', { className: "text-center py-12 text-gray-500 bg-dark-surface/30 rounded-3xl border border-white/5 border-dashed" }, "No hay movimientos con este filtro") :
