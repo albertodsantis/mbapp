@@ -1184,11 +1184,13 @@
                 const selectedMonth = currentDate.getMonth();
                 const selectedYear = currentDate.getFullYear();
                 
-                let ingresos = 0, gastos = 0, ahorro = 0, balance = 0;
+                let ingresos = 0, gastos = 0, gastosFijos = 0, gastosVariables = 0, ahorro = 0, balance = 0;
                 
                 // Nuevos acumuladores para desglose
                 let ingresosVES = 0, ingresosHard = 0; // Hard = USD + EUR (en valor USD)
                 let gastosVES = 0, gastosHard = 0;
+                let gastosFijosVES = 0, gastosFijosHard = 0;
+                let gastosVariablesVES = 0, gastosVariablesHard = 0;
                 let ahorroVES = 0, ahorroHard = 0;
                 let balanceVES = 0, balanceHard = 0;
                 let balanceBsOriginalUSD = 0;
@@ -1237,7 +1239,17 @@
                             gastos += amountUSD;
                             if (isVES) gastosVES += amountRaw;
                             else gastosHard += amountUSD;
-                        } 
+
+                            if (t.segment === 'gastos_fijos') {
+                                gastosFijos += amountUSD;
+                                if (isVES) gastosFijosVES += amountRaw;
+                                else gastosFijosHard += amountUSD;
+                            } else if (t.segment === 'gastos_variables') {
+                                gastosVariables += amountUSD;
+                                if (isVES) gastosVariablesVES += amountRaw;
+                                else gastosVariablesHard += amountUSD;
+                            }
+                        }
                         
                         // Balance
                         if (t.type === 'income') {
@@ -1260,9 +1272,11 @@
                     }
                 });
                 return { 
-                    ingresos, gastos, ahorro, balance, 
+                    ingresos, gastos, gastosFijos, gastosVariables, ahorro, balance,
                     ingresosVES, ingresosHard,
                     gastosVES, gastosHard,
+                    gastosFijosVES, gastosFijosHard,
+                    gastosVariablesVES, gastosVariablesHard,
                     ahorroVES, ahorroHard,
                     ahorroBsOriginalUSD,
                     balanceVES, balanceHard, balanceBsOriginalUSD
@@ -1278,18 +1292,6 @@
                 const percent = ((currentValUSD - originalValUSD) / originalValUSD) * 100;
                 return { percent, currentVal: currentValUSD };
             }, [dashboardData.ahorroVES, dashboardData.ahorroBsOriginalUSD, rates.bcv]);
-
-            // Calculo de devaluación del Resultado (Bs)
-            const resultDevaluationData = useMemo(() => {
-                 if (dashboardData.balanceVES === 0 || !rates.bcv || rates.bcv === 0) return { percent: 0 };
-                 const currentValUSD = dashboardData.balanceVES / rates.bcv;
-                 const originalValUSD = dashboardData.balanceBsOriginalUSD;
-                 // Evitar división por cero o números muy pequeños
-                 if (Math.abs(originalValUSD) < 0.01) return { percent: 0 };
-                 
-                 const percent = ((currentValUSD - originalValUSD) / originalValUSD) * 100;
-                 return { percent };
-            }, [dashboardData.balanceVES, dashboardData.balanceBsOriginalUSD, rates.bcv]);
 
             const username = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
 
@@ -1404,25 +1406,14 @@
                     // Ingresos
                     renderKPI("Ingresos", dashboardData.ingresos, dashboardData.ingresosVES, dashboardData.ingresosHard, React.createElement(TrendingUp, { size: 14 }), "text-white", "bg-emerald-500/10 text-emerald-400", "ingresos"),
                     
-                    // Gastos
-                    renderKPI("Gastos", dashboardData.gastos, dashboardData.gastosVES, dashboardData.gastosHard, React.createElement(TrendingDown, { size: 14 }), "text-white", "bg-rose-500/10 text-rose-400", "gastos"),
-                    
+                    // Gastos fijos
+                    renderKPI("Gastos Fijos", dashboardData.gastosFijos, dashboardData.gastosFijosVES, dashboardData.gastosFijosHard, React.createElement(CreditCard, { size: 14 }), "text-white", "bg-orange-500/10 text-orange-400", "gastos"),
+
+                    // Gastos variables
+                    renderKPI("Gastos Variables", dashboardData.gastosVariables, dashboardData.gastosVariablesVES, dashboardData.gastosVariablesHard, React.createElement(TrendingDown, { size: 14 }), "text-white", "bg-rose-500/10 text-rose-400", "gastos"),
+
                     // Ahorro
-                    renderKPI("Ahorro", dashboardData.ahorro, dashboardData.ahorroVES, dashboardData.ahorroHard, React.createElement(PiggyBank, { size: 14 }), "text-white", "bg-blue-500/10 text-blue-400", "ahorro", true),
-                    
-                    // Resultado (Ahora con split y devaluación)
-                    renderKPI(
-                        "Resultado",
-                        dashboardData.balance,
-                        dashboardData.balanceVES,
-                        dashboardData.balanceHard,
-                        dashboardData.balance >= 0 ? React.createElement(Check, { size: 14 }) : React.createElement(AlertTriangle, { size: 14 }),
-                        dashboardData.balance >= 0 ? 'text-emerald-400' : 'text-red-400',
-                        dashboardData.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
-                        "all",
-                        false, // No usar data de ahorro
-                        resultDevaluationData.percent // Usar data de resultado custom
-                    )
+                    renderKPI("Ahorro", dashboardData.ahorro, dashboardData.ahorroVES, dashboardData.ahorroHard, React.createElement(PiggyBank, { size: 14 }), "text-white", "bg-blue-500/10 text-blue-400", "ahorro", true)
                 ),
 
                 // NOTA: Se eliminó el botón de "Reportes Detallados" separado para limpiar la UI y dar espacio a futuras métricas.
