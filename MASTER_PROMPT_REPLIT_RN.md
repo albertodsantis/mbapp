@@ -2,6 +2,15 @@
 
 Quiero que actúes como **arquitecto + implementador senior de React Native** y construyas una app mobile productiva basada en mi webapp **Sencillo**.
 
+## Contexto obligatorio (sí, incluir código actual)
+Para evitar pérdida de lógica, **te voy a compartir el código actual de la webapp** y debes usarlo como fuente de verdad.
+
+1. Toma como baseline el archivo actual: `index.html` (Sencillo web).
+2. Extrae de allí reglas de negocio, cálculos, estructuras de datos y flujos.
+3. Si alguna regla en este prompt difiere del código, **prioriza reproducir el comportamiento real del código** y documenta la diferencia.
+
+> Instrucción para Replit: antes de programar, crea un documento `docs/web-baseline.md` con un resumen estructurado de la lógica encontrada en `index.html` (tasas, conversiones, KPIs, budget, P&L, recurrencias, Firestore).
+
 ## Objetivo principal (no negociable)
 - Migrar la app a React Native (Expo) usando `StyleSheet` + `NativeWind`.
 - **Preservar 100% la lógica financiera actual** (cálculos, conversiones, acumulados, filtros, reportes y presupuesto).
@@ -169,3 +178,16 @@ No se considera terminado hasta que:
 4. Finalmente entrega guía para correr en Replit + Expo Go.
 
 Cuando haya ambigüedad, prioriza siempre **preservar lógica financiera existente** sobre cambios cosméticos.
+
+---
+
+## Anexo recomendado: pegar código fuente actual
+Para máxima precisión, después de este prompt pega el contenido completo del `index.html` dentro de este bloque:
+
+```txt
+=== INICIO CODIGO WEB SENCILLO (BASELINE) ===
+[PEGA AQUÍ index.html COMPLETO]
+=== FIN CODIGO WEB SENCILLO (BASELINE) ===
+```
+
+Si el contexto es muy largo para un solo mensaje, pégalo por partes en orden y confirma recepción antes de implementar.
